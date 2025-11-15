@@ -8,17 +8,10 @@ const {
     MessageFlags,
     AttachmentBuilder, // <-- Imported AttachmentBuilder
 } = require("discord.js");
-// Make sure this path is correct relative to `quiz.js`
-// If 'commands' is in the root, and 'config.json' is in the root, this should be '../config.json'
-const resultsChannelId = "1439264250471252058";
-const quizQuestions = require("../../data/quiz-data.js"); // Pulls from your data file
 
-// --- Helper Function ---
-/**
- * Shuffles an array in place.
- * @param {Array} array The array to shuffle.
- * @returns {Array} The shuffled array.
- */
+const resultsChannelId = "1439264250471252058";
+const quizQuestions = require("../../data/quiz-data.js");
+
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -66,18 +59,25 @@ module.exports = {
                 correct,
             } = currentQuestion;
 
-            // Shuffle options for this question
-            const shuffledOptions = shuffleArray([...options]);
+            // --- FIX FOR DUPLICATE OPTIONS ---
+            // 1. Get only unique options from the data file
+            const uniqueOptions = [...new Set(options)];
+            // 2. Shuffle the unique options
+            const shuffledOptions = shuffleArray(uniqueOptions);
+            // --- END FIX ---
 
             // Create the Select Menu
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId("quiz_answer")
                 .setPlaceholder("Select an answer...")
                 .addOptions(
-                    shuffledOptions.map((option) =>
-                        new StringSelectMenuOptionBuilder()
-                            .setLabel(option.slice(0, 100))
-                            .setValue(option)
+                    shuffledOptions.map(
+                        (
+                            option // <-- Now uses the de-duplicated "shuffledOptions"
+                        ) =>
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(option.slice(0, 100))
+                                .setValue(option)
                     )
                 );
 
@@ -131,7 +131,11 @@ module.exports = {
                     feedback = "Question skipped.";
                 }
 
-                const isCorrect = userAnswer === correct;
+                // --- MULTI-ANSWER CHECK ---
+                // Check if the user's answer is in the "correct" array
+                const isCorrect = correct.includes(userAnswer);
+                // --- END MULTI-ANSWER CHECK ---
+
                 if (isCorrect) {
                     score++;
                 }
@@ -139,7 +143,7 @@ module.exports = {
                 userAnswers.push({
                     question: questionText,
                     userAnswer,
-                    correct,
+                    correct: correct.join(" or "),
                     isCorrect,
                 });
 
@@ -151,12 +155,15 @@ module.exports = {
                 });
             } catch (err) {
                 // This block executes if the 15-second timer runs out
+                // --- MULTI-ANSWER CHECK ---
                 userAnswers.push({
                     question: questionText,
                     userAnswer: "Timed Out",
-                    correct,
+                    correct: correct.join(" or "),
                     isCorrect: false,
                 });
+                // --- END MULTI-ANSWER CHECK ---
+
                 await interaction.editReply({
                     content: "Time is up! Moving to the next question...", // <-- Updated content
                     embeds: [],
@@ -205,7 +212,8 @@ module.exports = {
             userAnswers.forEach((answer, index) => {
                 fileContent += `Q${index + 1}: ${answer.question}\n`;
                 fileContent += `  Your answer: ${answer.userAnswer}\n`;
-                fileContent += `  Correct answer: ${answer.correct}\n`;
+                // "correct" is now an array, so we join it for readability
+                fileContent += `  Correct answer(s): ${answer.correct}\n`;
                 fileContent += `  Result: ${
                     answer.isCorrect ? "✅ Correct" : "❌ Incorrect"
                 }\n\n`;
@@ -230,11 +238,14 @@ module.exports = {
                     content: resultsMessageContent, // <-- Plain text results
                     files: [resultsFile], // <-- Attach the .txt file
                 });
-                // Send a final ephemeral message to the user
+
+                // --- CHANGE HERE ---
+                // Send a final ephemeral message to the user WITH THEIR SCORE
                 await interaction.followUp({
-                    content: `Your results have been posted in the <#${resultsChannelId}> channel!`,
+                    content: `Quiz complete! You scored **${score}/${questions.length}**`,
                     flags: [MessageFlags.Ephemeral],
                 });
+                // --- END CHANGE ---
             } catch (err) {
                 console.error("Error posting results:", err);
                 await interaction.followUp({
