@@ -1,0 +1,102 @@
+[
+    {
+        "type": "messsage",
+        "id": "welcome-msg",
+        "content": "# <:VerifiedLogo:847352679114080266> __Welcome to Jurassic World__\nExplore the Jurassic franchise with fans from around the globe! From Jurassic Park to Jurassic World, Camp Cretaceous, & Chaos Theory, there's something for everyone to discover!\n\nChat about movies, shows, books, games, or hang out in voice channels. Dive into fun activities, bots, and more!\n\nBe sure to check out the rules and server info below to keep our park a safe and fun space. Our <@&857990235194261514> are here to assist, so don't hesitate to ask.\n\nThanks for joining, and enjoy your adventure at Jurassic World",
+        "components": [
+            {
+                "action-row": 1,
+                "type": "string-select-menu",
+                "placeholder": "click here to know more",
+                "custom_id": "welcome-menu-options",
+                "options": [
+                    {
+                        "type": "select-menu-option",
+                        "label": "Roles",
+                        "value": "roles-info",
+                        "description": "information about the server's roles",
+                        "emoji_name": null,
+                        "emoji_id": null,
+                        "emoji_animated": null,
+                        "onInteraction": {
+                            "type": "message",
+                            "id": "roles-msg",
+                            "content": "# ROLES\n### Level Roles\n- <@&843855760579624980> - level 5\n- <@&843856055657955358> - level 15\n- <@&843856166994968597> - level 25\n- <@&843856481288060978> - level 50\n- <@&843856587469750333> - level 75\n  - unlocks <#854992604886466560> \n- <@&843856716382208020> - level 100\n- <@&843856730232324148> - level 150\n### Activity Role\n- <@&860393593259425813>\n  - hoisted above member roles\n  - grants access to <#854992604886466560>\n  - automatically granted after sending a specific amount of messages in a specific period of time\n### Other Roles\n- <@&844531446269214740> (requirements: 50 subscribers, consistent uploads depending on content type)\n  - grants access to <#854992604886466560> \n- <@&846788337711972402> (granted after posting your artworks in <#855663717030690846>)\n  - grants access to <#843830292837171220>\n- <@&847333223537049610> (granted after consistently posting in <#843830292837171220>)\n### __you can manage your Role preferences in <id:customize>__",
+                            "components": null,
+                            "ephemeral": true
+                        }
+                    },
+                    {
+                        "type": "select-menu-option",
+                        "label": "Channels",
+                        "value": "channels-info",
+                        "description": "information about the server's channels",
+                        "emoji_name": null,
+                        "emoji_id": null,
+                        "emoji_animated": null,
+                        "onInteraction": {
+                            "type": "message",
+                            "id": "channels-msg",
+                            "content": "# CHANNELS\nuse channels for their intended purposes\n### General Chat\n- <#1008659239864115220> - chat about anything here\n- <#1267781774109315116> - send your photos and memes\n- <#842747868960129025> - general chat to move to when other channels get off topic\n### Jurassic Chat\n- <#1212666931275104256>, for discussion about the **Jurassic Movies**\n- <#864823806673420288>, for discussions about the **Jurassic TV** shows\n-  <#849948977940135936>, for spoiler discussions about the most recent **Jurassic movie/show**\n- <#843830292837171220>, for posting your **Jurassic/Paleo artwork**\n- <#889569388326420562>, for discussions about **Jurassic Games**\n- <#855663717030690846>, for posting your **Jurassic Toys**, **Merch** & **Collectibles**\n- <#855706221067108362>, for discussions about **Paleontology**\n### Voice and Misc\n- <#854992604886466560> - channel to promote your content ¹\n- <#915890444922155008> - a channel to send your bot commands\n- <#843830483141525564> - general voice chat\n- <#843830571158339644> - voice channel for music\n- <#843831162732544030> - voice channel for streaming your games/movies\n-# 1\\. you need either <@&860393593259425813> or <@&844531446269214740> to get access to this channel.\n### __you can manage your Channel preferences in <id:browse>__",
+                            "components": null,
+                            "ephemeral": true
+                        }
+                    },
+                    {
+                        "type": "select-menu-option",
+                        "label": "Staff",
+                        "value": "staff-info",
+                        "description": "information about the server's staff",
+                        "emoji_name": null,
+                        "emoji_id": null,
+                        "emoji_animated": null,
+                        "onInteraction": {
+                            "type": "message",
+                            "id": "staff-msg",
+                            "content": "# STAFF\nhierarchy of staff in the server\n\n**Administrators** (<@&862616575890030592>)\n- <@732177983741362256> \n- <@1038453964812861440>\n\n**Senior Staff** (<@&867964544717295646>)\n- [people who have the role with id <@&867964544717295646>]\n\n**Staff** (<@&842763148985368617>)\n- [people who have role with id <@&842763148985368617>]\n\n**Trial Staff** (<@&842742230409150495>)\n- [people who have role with id <@&842742230409150495>]",
+                            "components": null,
+                            "ephemeral": true
+                        }
+                    }
+                ]
+            },
+            {
+                "action-row": 2,
+                "type": "button",
+                "label": "Server Rules",
+                "value": "rules-info",
+                "disabled": false,
+                "style": "primary",
+                "custom_id": "rules-info",
+                "emoji_name": "rules",
+                "emoji_id": "1316398656462786703",
+                "emoji_animated": false,
+                "onInteraction": {
+                    "type": "message",
+                    "id": "rules-msg",
+                    "content": "# RULES \n**Violation of these rules will result in a warning, kick, mute or ban depending on the actions taken. <@&857990235194261514> team does not have to justify themselves to the users. They act according to what they have been instructed.**\n\n- **Respect** everyone.\n- **Keep using English** in all channels.\n- Do not use **hate speech** or engage in other hateful conduct.\n- Do not share **false or misleading information**.\n- Do not send **unsolicited bulk messages** (or spam).\n- Do not send **NSFW content**. This rule also applies to conversations to a certain degree.\n- Do not discuss about **politics** as they lead to unnecessary fighting and nsfw things like *\"gooning\"*, so please keep these topics out of the server.\n- **Advertising** in the form of links (to discord servers and other content) is **not allowed** except for <@&844531446269214740>s. **DM advertising is strictly prohibited** and will lead to a ban.\n- if you have any feedback, suggestions go to <#1046984501013790741> & for any issues please open a ticket by typing </ticket:967419478176583710> in <#915890444922155008>\n\n> **Any action taken by the staff are final and are ultimately up to the discretion of the <@&857990235194261514>**.\n\n-# Follow the **[Discord Terms of Service](https://discord.com/terms)** & **[Community Guidelines](https://discord.com/guidelines)**.",
+                    "ephemeral": true
+                }
+            },
+            {
+                "action-row": 2,
+                "type": "button",
+                "label": "Booster Perks",
+                "value": "boost-info",
+                "disabled": false,
+                "style": "secondary",
+                "custom_id": "boost-info",
+                "emoji_name": "boost",
+                "emoji_id": "1375359632079585402",
+                "emoji_animated": false,
+                "onInteraction": {
+                    "type": "message",
+                    "id": "boost-msg",
+                    "content": "# BOOSTER PERKS\nThese perks will be given to you once you boost our server:\n- You will be given the <@&855954434935619584> role which is hoisted on top from every other role except staff roles\n- You will unlock the following permissions instantly:\n  - embed links (gif perms)\n  - attach files\n- Custom role with your desired name & color, run </custom-role:1375450941452714025> in <#915890444922155008> ¹\n- Access to choose from a variety of gradient roles ²\n-# 1  - Please contact a staff member if any error occurs while running this command\n-# 2 - Gradient Roles availability are subject to the amount of boosts the server has. They'll be available once the server has enough boosts",
+                    "ephemeral": true
+                }
+            }
+        ],
+        "ephemeral": false
+    }
+]
