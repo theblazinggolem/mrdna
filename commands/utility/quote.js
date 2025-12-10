@@ -8,7 +8,7 @@ module.exports = {
     async execute(interaction) {
         const randomIndex = Math.floor(Math.random() * quotes.length);
         const randomQuoteIndex = quotes[randomIndex];
-        const quote = `${randomQuoteIndex.text}\n-# jump to [message](${randomQuoteIndex.link})`;
+        const quote = `${randomQuoteIndex.text}\n-# jump to [original message](${randomQuoteIndex.link})`;
         await interaction.reply(quote);
     },
 };

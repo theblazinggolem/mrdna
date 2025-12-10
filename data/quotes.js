@@ -79,6 +79,41 @@ export const quotes = [
         link: "https://discord.com/channels/841699180271239218/1008659239864115220/1391247183356891136",
         author: "",
     },
+    {
+        text: "What's good broke lamers it's your girl brokelame coming at you from the best place ever the homeless shelter",
+        link: "https://discord.com/channels/841699180271239218/849947867841822740/884053833435709482",
+        author: "",
+    },
+    {
+        text: "Only merch i got is a snickers wrapper 💔",
+        link: "https://discord.com/channels/841699180271239218/855663717030690846/1392677672609517750",
+        author: "",
+    },
+    {
+        text: "The year is 2075, the Nublar 6 are fighting dinosaurs in the nursery home. Jurassic World: Retirement",
+        link: "https://discord.com/channels/841699180271239218/849948977940135936/1399210971163131906",
+        author: "1220764912905621574",
+    },
+    {
+        text: "(Imma go to bed, I'm a tire)",
+        link: "https://discord.com/channels/841699180271239218/1049355935497334856/1409511783798013996",
+        author: "",
+    },
+    {
+        text: "Either you're severely on the spectrum for dinosaurs or you're just here for the emojis",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1411541864535953429",
+        author: "",
+    },
+    {
+        text: "https://media.discordapp.net/attachments/1379527311711277086/1394218829210583151/lv_0_20250714022705.gif?ex=693a7278&is=693920f8&hm=e064560c7cc988f60f9b2fb21b234a581238449f66ea4ff9cc1bc7e2ff8a1700&=&width=480&height=852",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1415379104584433745",
+        author: "",
+    },
+    {
+        text: "that time dodgeson smashed a 10 year old",
+        link: "https://discord.com/channels/841699180271239218/1439406126864007358/1439430557233713152",
+        author: "",
+    },
 ];
 /*
     {
