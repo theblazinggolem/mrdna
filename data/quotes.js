@@ -114,6 +114,26 @@ export const quotes = [
         link: "https://discord.com/channels/841699180271239218/1439406126864007358/1439430557233713152",
         author: "",
     },
+    {
+        text: "i am a predator (rank wise of course)",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1447018407621955654",
+        author: "",
+    },
+    {
+        text: "the skip on your mod application?",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1398572180769345570",
+        author: "",
+    },
+    {
+        text: "",
+        link: "",
+        author: "",
+    },
+    {
+        text: "",
+        link: "",
+        author: "",
+    },
 ];
 /*
     {
