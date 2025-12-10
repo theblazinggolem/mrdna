@@ -13,7 +13,7 @@ const commandData = require("../data/command-data.json");
 
 const LVL_25_CONFIG = {
     customId: "lvl_25_gradient_roles",
-    title: "Lvl 25+ Gradient Roles",
+    title: "Lvl 25+ Gradient Role",
     minRoleId: "1375397609908469800",
     maxRoleId: "1375397935050919997",
     requiredRoleIds: [
@@ -31,7 +31,7 @@ const LVL_25_CONFIG = {
 
 const LVL_50_CONFIG = {
     customId: "lvl_50_gradient_roles",
-    title: "Lvl 50+ Gradient Roles",
+    title: "Lvl 50+ Gradient Role",
     minRoleId: "1424016868091363444",
     maxRoleId: "1416232141636763760",
     requiredRoleIds: [
@@ -48,7 +48,7 @@ const LVL_50_CONFIG = {
 
 const CHARACTER_ROLES_CONFIG = {
     customId: "character_roles",
-    title: "Character Roles",
+    title: "Character Role",
     minRoleId: "1414619710968037449", // e.g., "142800000000000000"
     maxRoleId: "1424016949288898731", // e.g., "142800000000000001"
     requiredRoleIds: [

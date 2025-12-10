@@ -25,7 +25,6 @@ module.exports = {
 
     async execute(interaction) {
         try {
-            // Find the welcome message from menuData
             const welcomeMsg = menuData.find(
                 (item) => item.id === "welcome-msg"
             );
