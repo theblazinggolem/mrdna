@@ -134,6 +134,56 @@ export const quotes = [
         link: "https://discord.com/channels/841699180271239218/1008659239864115220/1411115258575065171",
         author: "",
     },
+    {
+        text: "I AN A PREDATOR",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1416638210892763196",
+        author: "",
+    },
+    {
+        text: "Jwe fans when they get a 'boring' dinosaur instead of ballticklesaurus 💔 :",
+        link: "https://discord.com/channels/841699180271239218/889569388326420562/1415280397419548778",
+        author: "",
+    },
+    {
+        text: "When the soyona is santosing it",
+        link: "https://discord.com/channels/841699180271239218/1267781774109315116/1414936957250965644",
+        author: "",
+    },
+    {
+        text: "deep fried ben",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1411760508826026166",
+        author: "",
+    },
+    {
+        text: 'Did you know that jurassic world was actually based on a true story. In 6967 a korean man named "ju arass ick park " was obsessed with lizards and opened the biggest reptilian zoo in the world until all the lizards escaped and terrorised the people in his hometown',
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1411286984588263425",
+        author: "",
+    },
+    {
+        text: "## COUGHING BADY VS. 1O COMPIES",
+        link: "https://ptb.discord.com/channels/841699180271239218/849947929464274944/1411277918012964914",
+        author: "",
+    },
+    {
+        text: "do u guys like dinosuards",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1409399922989600832",
+        author: "",
+    },
+    {
+        text: `fattest people in JW/JP: 1. Sammy ("I am always 2 steps behind") 2. Dennis Nedry ("Nuh uh uh you didn't feed me the magic meal") 3. Vic hoskins ("I need these raptors to fetch me a meal")`,
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1409050320365031476",
+        author: "",
+    },
+    {
+        text: "If the Indoraptor was a human. Would he be a goth femboy...?",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1399758539680907447",
+        author: "",
+    },
+    {
+        text: "Breakings news: The T rex was of alien origins and the spino was retarded",
+        link: "https://discord.com/channels/841699180271239218/855706221067108362/1374947220180303882",
+        author: "",
+    },
 ];
 /*
     {
