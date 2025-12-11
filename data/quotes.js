@@ -125,13 +125,13 @@ export const quotes = [
         author: "",
     },
     {
-        text: "",
-        link: "",
+        text: "i have to be honest, i like dominion cuz is too stupid to the point that is funny",
+        link: "https://discord.com/channels/841699180271239218/1212666931275104256/1448446726502486016",
         author: "",
     },
     {
-        text: "",
-        link: "",
+        text: "I have not sleep for six hours and my toe has been attacking me for some reason",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1411115258575065171",
         author: "",
     },
 ];
