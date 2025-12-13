@@ -1,10 +1,5 @@
 export const quotes = [
     {
-        text: "Crystal is a common breed of internet gremlin",
-        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1439320433521332577",
-        author: "1001016889046208522",
-    },
-    {
         text: "Crystal and awesome in the same sentence should be a heresy",
         link: "https://discord.com/channels/841699180271239218/1008659239864115220/1439320149743243335",
         author: "1001016889046208522",
@@ -182,6 +177,21 @@ export const quotes = [
     {
         text: "Breakings news: The T rex was of alien origins and the spino was retarded",
         link: "https://discord.com/channels/841699180271239218/855706221067108362/1374947220180303882",
+        author: "",
+    },
+    {
+        text: "<@693325837944225833> do you want to strip Darius or not",
+        link: "https://discord.com/channels/854679490134147102/894554917207957554/1431766271694868660",
+        author: "",
+    },
+    {
+        text: "thats the male claire my bad",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1449324630216278016",
+        author: "",
+    },
+    {
+        text: "man vs a handicapped woman",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1446521265711222967",
         author: "",
     },
 ];
