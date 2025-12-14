@@ -194,6 +194,21 @@ export const quotes = [
         link: "https://discord.com/channels/841699180271239218/1008659239864115220/1446521265711222967",
         author: "",
     },
+    {
+        text: "this servers tag should be deGen instead of inGen",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1449473052533461042",
+        author: "",
+    },
+    {
+        text: "i must be named jeff cuz my goals bloom",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1449630293970387004",
+        author: "",
+    },
+    {
+        text: "",
+        link: "",
+        author: "",
+    },
 ];
 /*
     {
