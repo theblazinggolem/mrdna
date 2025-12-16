@@ -204,11 +204,6 @@ export const quotes = [
         link: "https://discord.com/channels/841699180271239218/1008659239864115220/1449630293970387004",
         author: "",
     },
-    {
-        text: "",
-        link: "",
-        author: "",
-    },
 ];
 /*
     {
