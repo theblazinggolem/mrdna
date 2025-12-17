@@ -4,7 +4,7 @@ const {
     MessageFlags,
 } = require("discord.js");
 
-const STAFF_ROLE_ID = "842763148985368617";
+const STAFF_ROLE_ID = "857990235194261514";
 const LOG_CHANNEL_ID = "1350108952041492561";
 
 const ASSIGNABLE_ROLES = [
@@ -55,84 +55,87 @@ const REVOKE_CONFIGS = {
     },
 };
 
-module.exports = {
-    data: new SlashCommandBuilder()
-        .setName("role")
-        .setDescription("Manage specific roles in the server.")
-        .addSubcommand((subcommand) =>
-            subcommand
-                .setName("assign")
-                .setDescription(
-                    "Assigns or removes special roles (Staff Only)."
-                )
-                .addUserOption((option) =>
-                    option
-                        .setName("user")
-                        .setDescription("The member to manage")
-                        .setRequired(true)
-                )
-                .addStringOption((option) =>
-                    option
-                        .setName("role")
-                        .setDescription("The role to assign or remove")
-                        .setRequired(true)
-                        .addChoices(
-                            ...ASSIGNABLE_ROLES.map((r) => ({
-                                name: r.name,
-                                value: r.name,
-                            }))
-                        )
-                )
-                .addBooleanOption((option) =>
-                    option
-                        .setName("remove")
-                        .setDescription(
-                            "Select True to remove this role instead of adding it"
-                        )
-                        .setRequired(false)
-                )
-        )
-        .addSubcommand((subcommand) =>
-            subcommand
-                .setName("revoke")
-                .setDescription(
-                    "Revokes gradient/custom roles from unauthorized users."
-                )
-                .addStringOption((option) =>
-                    option
-                        .setName("category")
-                        .setDescription("The category of roles to check")
-                        .setRequired(true)
-                        .addChoices(
-                            { name: "Custom Roles (Booster)", value: "custom" },
-                            { name: "Lvl 25+ Gradient", value: "lvl25" },
-                            { name: "Lvl 50+ Gradient", value: "lvl50" }
-                        )
-                )
-                .addStringOption((option) =>
-                    option
-                        .setName("action")
-                        .setDescription("Action to take (Default: List)")
-                        .setRequired(false)
-                        .addChoices(
-                            { name: "List Users", value: "list" },
-                            { name: "Execute Revoke", value: "execute" }
-                        )
-                )
-        )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
-
-    async execute(interaction) {
-        const subcommand = interaction.options.getSubcommand();
-
-        if (subcommand === "assign") {
-            await handleAssign(interaction);
-        } else if (subcommand === "revoke") {
-            await handleRevoke(interaction);
+async function sendLogMessage(interaction, action, roleName, targetUser) {
+    try {
+        const logChannel = await interaction.guild.channels.fetch(
+            LOG_CHANNEL_ID
+        );
+        if (!logChannel || !logChannel.isTextBased()) {
+            console.error(`Log channel ${LOG_CHANNEL_ID} not found.`);
+            return;
         }
-    },
-};
 
+        // Format: "staff username assigned/removed roleName to/from @user"
+        const preposition = action === "assigned" ? "to" : "from";
+        const logContent = `**${
+            interaction.user.username
+        }** ${action} **${roleName}** ${preposition} ${targetUser.toString()}`;
+
+        await logChannel.send(logContent);
+    } catch (error) {
+        console.error("Failed to send log message:", error);
+    }
+}
+async function handleRemove(interaction) {
+    if (
+        !interaction.member.roles.cache.has(STAFF_ROLE_ID) &&
+        !interaction.member.permissions.has(PermissionFlagsBits.Administrator)
+    ) {
+        return interaction.reply({
+            content:
+                "You do not have the required Staff role to use this command.",
+            flags: MessageFlags.Ephemeral,
+        });
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    try {
+        const targetUser = interaction.options.getUser("user");
+        const roleNameValue = interaction.options.getString("role");
+
+        const roleConfig = ASSIGNABLE_ROLES.find(
+            (r) => r.name === roleNameValue
+        );
+
+        if (!roleConfig) {
+            return interaction.editReply({ content: "Invalid role selected." });
+        }
+
+        const member = await interaction.guild.members
+            .fetch(targetUser.id)
+            .catch(() => null);
+        if (!member) {
+            return interaction.editReply({
+                content: "User not found in this server.",
+            });
+        }
+
+        const role = await interaction.guild.roles.fetch(roleConfig.id);
+        if (!role) {
+            return interaction.editReply({
+                content: `Error: The **${roleConfig.name}** role (ID: ${roleConfig.id}) was not found.`,
+            });
+        }
+
+        if (!member.roles.cache.has(role.id)) {
+            return interaction.editReply({
+                content: `${targetUser} does not have the **${role.name}** role.`,
+            });
+        }
+
+        await member.roles.remove(role);
+        await interaction.editReply({
+            content: `✅ Successfully removed the **${role.name}** role from ${targetUser}.`,
+        });
+        await sendLogMessage(interaction, "removed", role.name, targetUser);
+    } catch (error) {
+        console.error("Error in remove logic:", error);
+        await interaction.editReply({
+            content: `An error occurred: ${error.message}`,
+        });
+    }
+}
 async function handleAssign(interaction) {
     if (
         !interaction.member.roles.cache.has(STAFF_ROLE_ID) &&
@@ -150,16 +153,13 @@ async function handleAssign(interaction) {
     try {
         const targetUser = interaction.options.getUser("user");
         const roleNameValue = interaction.options.getString("role");
-        const isRemove = interaction.options.getBoolean("remove") || false;
 
         const roleConfig = ASSIGNABLE_ROLES.find(
             (r) => r.name === roleNameValue
         );
 
         if (!roleConfig) {
-            return interaction.editReply({
-                content: "Invalid role selected.",
-            });
+            return interaction.editReply({ content: "Invalid role selected." });
         }
 
         const member = await interaction.guild.members
@@ -174,38 +174,21 @@ async function handleAssign(interaction) {
         const role = await interaction.guild.roles.fetch(roleConfig.id);
         if (!role) {
             return interaction.editReply({
-                content: `Error: The **${roleConfig.name}** role (ID: ${roleConfig.id}) was not found in this server.`,
+                content: `Error: The **${roleConfig.name}** role (ID: ${roleConfig.id}) was not found.`,
             });
         }
 
-        if (isRemove) {
-            if (!member.roles.cache.has(role.id)) {
-                return interaction.editReply({
-                    content: `${targetUser} does not have the **${role.name}** role.`,
-                });
-            }
-            await member.roles.remove(role);
-            await interaction.editReply({
-                content: `✅ Successfully removed the **${role.name}** role from ${targetUser}.`,
+        if (member.roles.cache.has(role.id)) {
+            return interaction.editReply({
+                content: `${targetUser} already has the **${role.name}** role.`,
             });
-            await sendLogMessage(interaction, "removed", role.name, targetUser);
-        } else {
-            if (member.roles.cache.has(role.id)) {
-                return interaction.editReply({
-                    content: `${targetUser} already has the **${role.name}** role.`,
-                });
-            }
-            await member.roles.add(role);
-            await interaction.editReply({
-                content: `✅ Successfully assigned the **${role.name}** role to ${targetUser}.`,
-            });
-            await sendLogMessage(
-                interaction,
-                "assigned",
-                role.name,
-                targetUser
-            );
         }
+
+        await member.roles.add(role);
+        await interaction.editReply({
+            content: `✅ Successfully assigned the **${role.name}** role to ${targetUser}.`,
+        });
+        await sendLogMessage(interaction, "assigned", role.name, targetUser);
     } catch (error) {
         console.error("Error in assign logic:", error);
         await interaction.editReply({
@@ -213,7 +196,6 @@ async function handleAssign(interaction) {
         });
     }
 }
-
 async function handleRevoke(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageRoles)) {
         return interaction.reply({
@@ -237,7 +219,6 @@ async function handleRevoke(interaction) {
             });
         }
 
-        // Fetch all members to ensure caches are up to date
         await interaction.guild.members.fetch();
 
         const minRole = await interaction.guild.roles.fetch(config.minRoleId);
@@ -249,11 +230,9 @@ async function handleRevoke(interaction) {
             });
         }
 
-        // Ensure minRole position is less than maxRole position
         const lowerBound = Math.min(minRole.position, maxRole.position);
         const upperBound = Math.max(minRole.position, maxRole.position);
 
-        // Filter for roles between the specified boundaries
         const targetRoles = interaction.guild.roles.cache.filter(
             (role) => role.position > lowerBound && role.position < upperBound
         );
@@ -265,10 +244,8 @@ async function handleRevoke(interaction) {
             });
         }
 
-        // Find members who have target roles but lack ALL required roles
         const usersToProcess = new Map();
         interaction.guild.members.cache.forEach((member) => {
-            // Member is authorized if they have at least ONE of the required roles
             const isAuthorized = config.requiredRoleIds.some((roleId) =>
                 member.roles.cache.has(roleId)
             );
@@ -325,6 +302,13 @@ async function handleRevoke(interaction) {
                             );
                             response += `- ✅ Removed <@&${role.id}>\n`;
                             rolesRemovedCount++;
+
+                            await sendLogMessage(
+                                interaction,
+                                "revoked",
+                                role.name,
+                                member.user
+                            );
                         } catch (error) {
                             console.error(
                                 `Failed to remove role ${role.name} from ${member.user.tag}:`,
@@ -357,23 +341,95 @@ async function handleRevoke(interaction) {
     }
 }
 
--async function sendLogMessage(interaction, action, roleName, targetUser) {
-    try {
-        const logChannel = await interaction.guild.channels.fetch(
-            LOG_CHANNEL_ID
-        );
-        if (!logChannel || !logChannel.isTextBased()) {
-            console.error(`Log channel ${LOG_CHANNEL_ID} not found.`);
-            return;
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("role")
+        .setDescription("Manage specific roles in the server.")
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("assign")
+                .setDescription("assigns roles.")
+                .addUserOption((option) =>
+                    option
+                        .setName("user")
+                        .setDescription("The member to assign the role to")
+                        .setRequired(true)
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName("role")
+                        .setDescription("The role to assign")
+                        .setRequired(true)
+                        .addChoices(
+                            ...ASSIGNABLE_ROLES.map((r) => ({
+                                name: r.name,
+                                value: r.name,
+                            }))
+                        )
+                )
+        )
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("remove")
+                .setDescription("Removes roles")
+                .addUserOption((option) =>
+                    option
+                        .setName("user")
+                        .setDescription("The member to remove the role from")
+                        .setRequired(true)
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName("role")
+                        .setDescription("The role to remove")
+                        .setRequired(true)
+                        .addChoices(
+                            ...ASSIGNABLE_ROLES.map((r) => ({
+                                name: r.name,
+                                value: r.name,
+                            }))
+                        )
+                )
+        )
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("revoke")
+                .setDescription(
+                    "Revokes gradient/custom roles from unauthorized users."
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName("category")
+                        .setDescription("The category of roles to check")
+                        .setRequired(true)
+                        .addChoices(
+                            { name: "Custom Roles (Booster)", value: "custom" },
+                            { name: "Lvl 25+ Gradient", value: "lvl25" },
+                            { name: "Lvl 50+ Gradient", value: "lvl50" }
+                        )
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName("action")
+                        .setDescription("Action to take")
+                        .setRequired(false)
+                        .addChoices(
+                            { name: "List Unauthorized Users", value: "list" },
+                            { name: "Execute Revoke", value: "execute" }
+                        )
+                )
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
+
+    async execute(interaction) {
+        const subcommand = interaction.options.getSubcommand();
+
+        if (subcommand === "assign") {
+            await handleAssign(interaction);
+        } else if (subcommand === "remove") {
+            await handleRemove(interaction);
+        } else if (subcommand === "revoke") {
+            await handleRevoke(interaction);
         }
-
-        const preposition = action === "assigned" ? "to" : "from";
-        const logContent = `**${
-            interaction.user.username
-        }** ${action} **${roleName}** ${preposition} ${targetUser.toString()}`;
-
-        await logChannel.send(logContent);
-    } catch (error) {
-        console.error("Failed to send log message:", error);
-    }
+    },
 };
