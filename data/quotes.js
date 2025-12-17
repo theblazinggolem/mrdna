@@ -204,6 +204,16 @@ export const quotes = [
         link: "https://discord.com/channels/841699180271239218/1008659239864115220/1449630293970387004",
         author: "",
     },
+    {
+        text: "how to get bitches tutorial",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1450899373612339320",
+        author: "",
+    },
+    {
+        text: "0 Bitches\n0 paper\n7 Colours of The rainbow",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1450899449340629193",
+        author: "",
+    },
 ];
 /*
     {

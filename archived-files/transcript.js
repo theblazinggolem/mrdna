@@ -24,7 +24,7 @@ module.exports = {
         .setDMPermission(false)
         .addBooleanOption((option) => option.setName("ephemeral"))
         .setDescription("Whether the transcript should be ephemral or not")
-        .setRequired(false).set, // Cannot be used in DMs
+        .setRequired(false), // Cannot be used in DMs
 
     async execute(interaction) {
         // Defer the reply to let the user know the bot is working on it.
@@ -43,7 +43,6 @@ module.exports = {
             const allMessages = [];
             let lastId;
 
-            // Let the user know the process has started, as it can be long.
             await interaction.editReply({
                 content:
                     "Fetching messages... This may take a while for large channels.",

@@ -281,7 +281,7 @@ async function createRoleMenu(guild, config) {
         });
 
     if (options.length > 25) {
-        options.length = 25; // Truncate
+        options.length = 25;
     }
 
     if (options.length > 0) {
@@ -294,18 +294,15 @@ async function createRoleMenu(guild, config) {
         return { menu, placeholder, hasOptions: false };
     }
 
-    // Menu is ALWAYS enabled by default, per your design.
     menu.setDisabled(false);
 
     return { menu, placeholder, hasOptions };
 }
-// --- END: Role Picker Helper Functions ---
 
 module.exports = {
     name: Events.InteractionCreate,
     async execute(interaction) {
         try {
-            // Handle slash commands
             if (interaction.isChatInputCommand()) {
                 const command = interaction.client.commands.get(
                     interaction.commandName
