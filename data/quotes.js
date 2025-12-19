@@ -214,6 +214,16 @@ export const quotes = [
         link: "https://discord.com/channels/841699180271239218/1008659239864115220/1450899449340629193",
         author: "",
     },
+    {
+        text: "This server is obviously made for human trafficking autistic people",
+        link: "https://discord.com/channels/841699180271239218/1008659239864115220/1451047347457884200",
+        author: "",
+    },
+    {
+        text: "",
+        link: "",
+        author: "",
+    },
 ];
 /*
     {
