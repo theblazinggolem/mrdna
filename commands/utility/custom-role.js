@@ -1,14 +1,10 @@
 const { SlashCommandBuilder, MessageFlags } = require("discord.js");
 
-// The booster role ID that's required to use this command
 const BOOSTER_ROLE_ID = "855954434935619584";
 
-// The two roles that define the boundaries of the custom role category.
-// The command will work correctly regardless of which ID is higher or lower.
 const BOUNDARY_ONE_ID = "1424000379712045237";
 const BOUNDARY_TWO_ID = "1424000711183826995";
 
-// The channel ID for logging role changes
 const LOG_CHANNEL_ID = "1350108952041492561";
 
 module.exports = {
@@ -29,9 +25,15 @@ module.exports = {
                 )
                 .addStringOption((option) =>
                     option
-                        .setName("color")
+                        .setName("primary_color")
+                        .setDescription("A hex code for your role")
+                        .setRequired(false)
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName("secondary_color")
                         .setDescription(
-                            "A hex color for your role (e.g., #FF5733). Optional."
+                            "Request a Gradient (Mods must apply this manually)."
                         )
                         .setRequired(false)
                 )
@@ -48,9 +50,15 @@ module.exports = {
                 )
                 .addStringOption((option) =>
                     option
-                        .setName("color")
+                        .setName("primary_color")
+                        .setDescription("The new hex code for your role.")
+                        .setRequired(false)
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName("secondary_color")
                         .setDescription(
-                            "The new hex color for your role (e.g., #FF5733)."
+                            "Request a Gradient (Mods must apply this manually)."
                         )
                         .setRequired(false)
                 )
@@ -70,7 +78,7 @@ module.exports = {
             const subcommand = interaction.options.getSubcommand();
             const member = interaction.member;
 
-            // Find role boundaries and user's existing custom role (common logic)
+            // Find role boundaries and user's existing custom role
             const { existingUserRole, upperPosition } =
                 await findUserCustomRole(interaction);
 
@@ -95,9 +103,6 @@ module.exports = {
     },
 };
 
-/**
- * Handles the logic for the `/custom-role create` subcommand.
- */
 async function handleCreate(
     interaction,
     member,
@@ -112,9 +117,12 @@ async function handleCreate(
     }
 
     const roleName = interaction.options.getString("name");
-    const roleColor = validateColor(interaction.options.getString("color"));
+    const roleColor = validateColor(
+        interaction.options.getString("primary_color")
+    );
+    const specialRequest = interaction.options.getString("secondary_color");
 
-    if (roleColor === false) {
+    if (interaction.options.getString("primary_color") && roleColor === false) {
         return interaction.followUp({
             content:
                 "The color you provided is not a valid hex code. Please use a format like `#FF5733` or `FF5733`.",
@@ -124,39 +132,53 @@ async function handleCreate(
 
     const newRole = await interaction.guild.roles.create({
         name: roleName,
-        color: roleColor,
+        color: roleColor || null,
         permissions: [],
-        // Correctly position the new role just below the upper boundary role
         position: upperPosition - 1,
         reason: `Custom role created for booster ${interaction.user.tag}`,
     });
 
     await member.roles.add(newRole.id);
 
+    let replyMsg = `Your new custom role <@&${newRole.id}> has been created and assigned to you!`;
+
+    if (specialRequest) {
+        await sendModRequest(
+            interaction,
+            member,
+            newRole,
+            specialRequest,
+            "Create"
+        );
+        replyMsg += `\n\n**Request Sent:** Your request for "${specialRequest}" has been sent to the staff. They will update your role shortly.`;
+    }
+
     await interaction.followUp({
-        content: `✅ Your new custom role <@&${newRole.id}> has been created and assigned to you!`,
+        content: replyMsg,
         flags: MessageFlags.Ephemeral,
     });
 
     await sendLogMessage(interaction, "created", newRole, member);
 }
 
-/**
- * Handles the logic for the `/custom-role edit` subcommand.
- */
 async function handleEdit(interaction, member, existingUserRole) {
     if (!existingUserRole) {
         return interaction.followUp({
             content:
-                "You do not have a custom role to edit. Use `/custom-role create` to make one first.",
+                "You do not have a custom role to edit. Use </custom-role create:1439114388492779624> to make one first.",
             flags: MessageFlags.Ephemeral,
         });
     }
 
     const roleName = interaction.options.getString("name");
-    const roleColor = validateColor(interaction.options.getString("color"));
 
-    if (roleColor === false) {
+    const rawPrimaryColor = interaction.options.getString("primary_color");
+    const validPrimaryColor = validateColor(rawPrimaryColor);
+
+    const secondaryColorRequest =
+        interaction.options.getString("secondary_color");
+
+    if (rawPrimaryColor && validPrimaryColor === false) {
         return interaction.followUp({
             content:
                 "The color you provided is not a valid hex code. Please use a format like `#FF5733` or `FF5733`.",
@@ -164,31 +186,60 @@ async function handleEdit(interaction, member, existingUserRole) {
         });
     }
 
-    if (!roleName && !roleColor) {
+    if (!roleName && !rawPrimaryColor && !secondaryColorRequest) {
         return interaction.followUp({
             content:
-                "You must provide a new name, a new color, or both to edit your role.",
+                "You must provide a new name, a new color, or a special request to edit your role.",
             flags: MessageFlags.Ephemeral,
         });
     }
 
     const updatedRole = await existingUserRole.edit({
         name: roleName || existingUserRole.name,
-        color: roleColor || existingUserRole.color,
+        color: validPrimaryColor || existingUserRole.color,
         reason: `Custom role updated for booster ${interaction.user.tag}`,
     });
 
+    let replyMsg = `Your custom role <@&${updatedRole.id}> has been successfully updated!`;
+
+    if (secondaryColorRequest) {
+        await sendModRequest(
+            interaction,
+            member,
+            updatedRole,
+            secondaryColorRequest,
+            "Edit"
+        );
+        replyMsg += `\n\n**Request Sent:** Your request for secondary color "${secondaryColorRequest}" has been sent to the staff.`;
+    }
+
     await interaction.followUp({
-        content: `✅ Your custom role <@&${updatedRole.id}> has been successfully updated!`,
+        content: replyMsg,
         flags: MessageFlags.Ephemeral,
     });
 
     await sendLogMessage(interaction, "edited", updatedRole, member);
 }
+async function sendModRequest(interaction, member, role, requestText, type) {
+    try {
+        const logChannel = await interaction.guild.channels.fetch(
+            LOG_CHANNEL_ID
+        );
+        if (!logChannel || !logChannel.isTextBased()) return;
 
-/**
- * Finds the boundaries for custom roles and checks if the user already has one.
- */
+        const modAlert = [
+            `**Custom Gradient Role Request** (${type})`,
+            `**User:** ${member.toString()}`,
+            `**Role:** ${role.toString()} (ID: \`${role.id}\`)`,
+            `**Secondary Color:** ${requestText}`,
+        ].join("\n");
+
+        await logChannel.send(modAlert);
+    } catch (error) {
+        console.error("Failed to send mod request log:", error);
+    }
+}
+
 async function findUserCustomRole(interaction) {
     const boundaryOneRole = await interaction.guild.roles.fetch(
         BOUNDARY_ONE_ID
@@ -222,9 +273,6 @@ async function findUserCustomRole(interaction) {
     return { existingUserRole, upperPosition };
 }
 
-/**
- * Validates and formats a hex color string.
- */
 function validateColor(color) {
     if (!color) return null;
     if (!color.startsWith("#")) {
@@ -234,23 +282,14 @@ function validateColor(color) {
     return hexColorRegex.test(color) ? color : false;
 }
 
-/**
- * Sends a formatted log message to the designated log channel.
- */
 async function sendLogMessage(interaction, action, role, member) {
     try {
         const logChannel = await interaction.guild.channels.fetch(
             LOG_CHANNEL_ID
         );
-        if (!logChannel || !logChannel.isTextBased()) {
-            console.error(
-                `Log channel with ID ${LOG_CHANNEL_ID} not found or is not a text channel.`
-            );
-            return;
-        }
+        if (!logChannel || !logChannel.isTextBased()) return;
 
         const logMessage = `Booster ${member.toString()} has ${action} custom role ${role.toString()}`;
-
         await logChannel.send(logMessage);
     } catch (error) {
         console.error("Failed to send log message:", error);
