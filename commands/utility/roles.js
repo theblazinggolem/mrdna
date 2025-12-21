@@ -31,7 +31,7 @@ const LVL_50_CONFIG = {
     customId: "lvl_50_gradient_roles",
     title: "Lvl 50+ Gradient Role",
     minRoleId: "1424016868091363444",
-    maxRoleId: "1416232141636763760",
+    maxRoleId: "1414114229136654416",
     requiredRoleIds: [
         "843856481288060978", // lvl 50 role
         "843856587469750333", // lvl 75 role
