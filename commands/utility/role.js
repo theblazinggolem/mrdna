@@ -14,8 +14,8 @@ const ASSIGNABLE_ROLES = [
 
 const REVOKE_CONFIGS = {
     custom: {
-        minRoleId: "1424000379712045237",
-        maxRoleId: "1424000711183826995",
+        minRoleId: "1424016949288898731",
+        maxRoleId: "1424000379712045237",
         requiredRoleIds: ["855954434935619584"], // Booster role
         title: "Custom Roles (Booster Perk)",
         unauthorizedReason: "User is not a server booster.",
@@ -38,7 +38,7 @@ const REVOKE_CONFIGS = {
         unauthorizedReason: "User does not meet Lvl 25+ requirements.",
     },
     lvl50: {
-        minRoleId: "1424016868091363444",
+        minRoleId: "1375397935050919997",
         maxRoleId: "1424016949288898731",
         requiredRoleIds: [
             "843856481288060978", // lvl 50 role

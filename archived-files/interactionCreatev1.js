@@ -5,71 +5,9 @@ const {
     ButtonBuilder,
     ButtonStyle,
     StringSelectMenuBuilder,
-    StringSelectMenuOptionBuilder, // Added for role-picker
-    ComponentType, // Added for role-picker
 } = require("discord.js");
 const menuData = require("../data/menu-data.json");
 const commandData = require("../data/command-data.json");
-const LVL_25_CONFIG = {
-    customId: "lvl_25_gradient_roles",
-    title: "Lvl 25+ Gradient Role",
-    minRoleId: "1375397609908469800",
-    maxRoleId: "1375397935050919997",
-    requiredRoleIds: [
-        "843856166994968597", // lvl 25 role
-        "843856481288060978", // lvl 50 role
-        "843856587469750333", // lvl 75 role
-        "843856716382208020", // lvl 100 role
-        "843856730232324148", // lvl 200 role
-        "842053547301273642", // vip pass role
-        "855954434935619584", // booster role
-        "857990235194261514", // staff
-        "913864890916147270", // admins
-    ],
-};
-
-const LVL_50_CONFIG = {
-    customId: "lvl_50_gradient_roles",
-    title: "Lvl 50+ Gradient Role",
-    minRoleId: "1375397935050919997",
-    maxRoleId: "1424016868091363444",
-    requiredRoleIds: [
-        "843856481288060978", // lvl 50 role
-        "843856587469750333", // lvl 75 role
-        "843856716382208020", // lvl 100 role
-        "843856730232324148", // lvl 200 role
-        "842053547301273642", // vip pass role
-        "855954434935619584", // booster role
-        "857990235194261514", // staff
-        "913864890916147270", // admins
-    ],
-};
-
-const CHARACTER_ROLES_CONFIG = {
-    customId: "character_roles",
-    title: "Character Role",
-    minRoleId: "1424016868091363444",
-    maxRoleId: "1424016949288898731",
-    requiredRoleIds: [
-        "843856481288060978", // lvl 50 role
-        "843856587469750333", // lvl 75 role
-        "843856716382208020", // lvl 100 role
-        "843856730232324148", // lvl 200 role
-        "842053547301273642", // vip pass role
-        "855954434935619584", // booster role
-        "857990235194261514", // staff
-        "913864890916147270", // admins
-    ],
-};
-
-const ALL_ROLE_CONFIGS = [LVL_25_CONFIG, LVL_50_CONFIG, CHARACTER_ROLES_CONFIG];
-const ALL_ROLE_PICKER_IDS = new Set([
-    LVL_25_CONFIG.customId,
-    LVL_50_CONFIG.customId,
-    CHARACTER_ROLES_CONFIG.customId,
-]);
-const REMOVE_ALL_BUTTON_ID = "remove_all_cosmetic_roles";
-// --- END: Role Picker Configurations ---
 
 // Helper function to find an interaction handler in menuData or commandData
 function findInteractionHandler(customId, value = null) {
@@ -131,7 +69,7 @@ function findInteractionHandler(customId, value = null) {
     return null;
 }
 
-// Helper function createSelectMenu (from menu-data.json)
+// Helper function to create a select menu based on config data
 function createSelectMenu(menuConfig) {
     const selectMenu = new StringSelectMenuBuilder()
         .setCustomId(menuConfig.custom_id)
@@ -158,7 +96,7 @@ function createSelectMenu(menuConfig) {
     return new ActionRowBuilder().addComponents(selectMenu);
 }
 
-// Helper function createButton (from menu-data.json)
+// Helper function to create a button based on config data
 function createButton(buttonConfig) {
     const button = new ButtonBuilder()
         .setCustomId(buttonConfig.custom_id)
@@ -204,104 +142,11 @@ function createButton(buttonConfig) {
     return button;
 }
 
-// --- START: Role Picker Helper Functions ---
-/**
- * Checks if a member meets the role requirements for a config.
- */
-function isMemberAuthorized(member, config) {
-    if (config.requiredRoleIds.length === 0) {
-        return true; // No requirements, everyone is authorized
-    }
-    return config.requiredRoleIds.some((roleId) =>
-        member.roles.cache.has(roleId)
-    );
-}
-
-/**
- * Fetches the roles within the boundaries of a config.
- */
-async function getRolesInConfig(guild, config) {
-    try {
-        const minRole = await guild.roles.fetch(config.minRoleId);
-        const maxRole = await guild.roles.fetch(config.maxRoleId);
-
-        if (!minRole || !maxRole) {
-            console.error(`Boundary roles not found for ${config.title}`);
-            return new Map();
-        }
-
-        const lowerBound = Math.min(minRole.position, maxRole.position);
-        const upperBound = Math.max(minRole.position, maxRole.position);
-
-        return guild.roles.cache.filter(
-            (role) => role.position > lowerBound && role.position < upperBound
-        );
-    } catch (error) {
-        console.error(
-            `Error fetching boundary roles for ${config.title}:`,
-            error
-        );
-        return new Map();
-    }
-}
-
-/**
- * Creates a StringSelectMenu for a specific role category.
- * This function now ALWAYS builds the menu with options and a default placeholder.
- * It does NOT check permissions.
- */
-async function createRoleMenu(guild, config) {
-    const menu = new StringSelectMenuBuilder()
-        .setCustomId(config.customId)
-        .setMinValues(1)
-        .setMaxValues(1);
-
-    const placeholder = `Select a ${config.title}`; // Default placeholder
-    menu.setPlaceholder(placeholder);
-
-    const roles = await getRolesInConfig(guild, config);
-    let hasOptions = false;
-
-    if (roles.size === 0) {
-        // No roles found, return a disabled menu
-        menu.setPlaceholder(
-            `No roles available for ${config.title}.`
-        ).setDisabled(true);
-        return { menu, placeholder, hasOptions: false };
-    }
-
-    // Build options
-    const options = Array.from(roles.values())
-        .sort((a, b) => a.name.localeCompare(b.name)) // Sort roles alphabetically
-        .map((role) => {
-            return new StringSelectMenuOptionBuilder()
-                .setLabel(role.name)
-                .setValue(role.id);
-        });
-
-    if (options.length > 25) {
-        options.length = 25;
-    }
-
-    if (options.length > 0) {
-        menu.addOptions(options);
-        hasOptions = true;
-    } else {
-        menu.setPlaceholder(
-            `No roles available for ${config.title}.`
-        ).setDisabled(true);
-        return { menu, placeholder, hasOptions: false };
-    }
-
-    menu.setDisabled(false);
-
-    return { menu, placeholder, hasOptions };
-}
-
 module.exports = {
     name: Events.InteractionCreate,
     async execute(interaction) {
         try {
+            // Handle slash commands
             if (interaction.isChatInputCommand()) {
                 const command = interaction.client.commands.get(
                     interaction.commandName
@@ -317,104 +162,12 @@ module.exports = {
                     return;
                 }
 
-                // --- NEW: Handle /roles command logic ---
-                if (interaction.commandName === "roles") {
-                    await interaction.guild.roles.fetch();
-                    const actionRows = [];
-
-                    // --- FIX: Create menus with all options, enabled by default ---
-                    for (const config of ALL_ROLE_CONFIGS) {
-                        // We don't pass the member, so perms aren't checked here
-                        const { menu, hasOptions } = await createRoleMenu(
-                            interaction.guild,
-                            config
-                        );
-                        if (hasOptions) {
-                            // Only add menu if roles were found
-                            actionRows.push(
-                                new ActionRowBuilder().addComponents(menu)
-                            );
-                        } else {
-                            console.log(
-                                `[RolePicker] No roles found for ${config.title}, not adding menu.`
-                            );
-                        }
-                    }
-
-                    if (actionRows.length === 0) {
-                        return interaction.reply({
-                            content:
-                                "There are no role-picker roles configured for this server.",
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    }
-
-                    // Add the button
-                    const removeButton = new ButtonBuilder()
-                        .setCustomId(REMOVE_ALL_BUTTON_ID)
-                        .setLabel("Remove All Cosmetic Roles")
-                        .setStyle(ButtonStyle.Danger);
-                    actionRows.push(
-                        new ActionRowBuilder().addComponents(removeButton)
-                    );
-
-                    // --- FIX: Send public message & ephemeral confirmation ---
-                    await interaction.channel.send({
-                        content:
-                            "# Gradient Roles\nSelect a role from the options below",
-                        components: actionRows,
-                    });
-
-                    return interaction.reply({
-                        content: "Role menu sent!",
-                        flags: MessageFlags.Ephemeral,
-                    });
-                }
-                // --- END: /roles logic ---
-
                 await command.execute(interaction);
             }
             // Handle button interactions
             else if (interaction.isButton()) {
                 const customId = interaction.customId;
                 console.log(`Processing button: ${customId}`);
-
-                // --- NEW: Handle "Remove All" button logic ---
-                if (customId === REMOVE_ALL_BUTTON_ID) {
-                    await interaction.deferReply({
-                        flags: MessageFlags.Ephemeral,
-                    }); // Ephemeral reply
-                    const member = interaction.member;
-                    const allRolesToRemove = [];
-                    let rolesFoundCount = 0;
-
-                    for (const config of ALL_ROLE_CONFIGS) {
-                        const categoryRoles = await getRolesInConfig(
-                            interaction.guild,
-                            config
-                        );
-                        const userRole = member.roles.cache.find((r) =>
-                            categoryRoles.has(r.id)
-                        );
-                        if (userRole) {
-                            allRolesToRemove.push(userRole);
-                            rolesFoundCount++;
-                        }
-                    }
-
-                    if (rolesFoundCount === 0) {
-                        return interaction.editReply({
-                            content:
-                                "You do not have any roles from these categories to remove.",
-                        });
-                    }
-
-                    await member.roles.remove(allRolesToRemove);
-                    return interaction.editReply({
-                        content: `Removed ${rolesFoundCount} cosmetic role(s).`,
-                    });
-                }
-                // --- END: "Remove All" logic ---
 
                 // Get a copy of the original components
                 const originalComponents = interaction.message.components.map(
@@ -575,64 +328,6 @@ module.exports = {
                 console.log(
                     `Processing select menu: ${customId}, selected: ${selectedValue}`
                 );
-
-                // --- NEW: Handle Role Picker Menus ---
-                if (ALL_ROLE_PICKER_IDS.has(customId)) {
-                    // --- FIX: Defer update, then send ephemeral follow-up ---
-                    await interaction.deferUpdate(); // This resets the placeholder
-
-                    const config = ALL_ROLE_CONFIGS.find(
-                        (c) => c.customId === customId
-                    );
-                    if (!config) return; // Should not happen
-
-                    const member = interaction.member;
-
-                    // --- FIX: Safeguard permission check ---
-                    // This is the check for the *interacting user*
-                    if (!isMemberAuthorized(member, config)) {
-                        return interaction.followUp({
-                            // Use followUp
-                            content: `You do not have the required roles to select from the "${config.title}" category.`,
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    }
-
-                    const newRole = await interaction.guild.roles.fetch(
-                        selectedValue
-                    );
-                    const categoryRoles = await getRolesInConfig(
-                        interaction.guild,
-                        config
-                    );
-                    const currentRole = member.roles.cache.find((r) =>
-                        categoryRoles.has(r.id)
-                    );
-
-                    let removedRoleMsg = "";
-
-                    if (currentRole) {
-                        if (currentRole.id === newRole.id) {
-                            return interaction.followUp({
-                                // Use followUp
-                                content: `You already have the ${currentRole.toString()} role.`,
-                                flags: MessageFlags.Ephemeral,
-                            });
-                        }
-                        await member.roles.remove(currentRole);
-                        removedRoleMsg = `\nRemoved: ${currentRole.toString()}`;
-                    }
-
-                    await member.roles.add(newRole);
-
-                    // Send the ephemeral follow-up
-                    return interaction.followUp({
-                        // Use followUp
-                        content: `Added: ${newRole.toString()}${removedRoleMsg}`,
-                        flags: MessageFlags.Ephemeral,
-                    });
-                }
-                // --- END: Role Picker Logic ---
 
                 // Get a copy of the original components to reset the placeholder
                 const originalComponents = interaction.message.components.map(
@@ -877,7 +572,7 @@ module.exports = {
                         }
                     } else {
                         console.log(
-                            `Unhandled interaction type: ${handler.type}`
+                            `Unhandled interaction handler type: ${handler.type}`
                         );
                         try {
                             // Update with the original components to reset the placeholder

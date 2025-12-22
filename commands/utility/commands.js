@@ -4,6 +4,7 @@ const {
     ButtonBuilder,
     ButtonStyle,
     MessageFlags,
+    ComponentType,
 } = require("discord.js");
 const commandData = require("../../data/command-data.json");
 
@@ -23,7 +24,6 @@ module.exports = {
                 });
             }
 
-            // Create components if any in the command data
             const components = [];
 
             if (commandData.components && commandData.components.length > 0) {
@@ -31,26 +31,23 @@ module.exports = {
                     if (comp["action-row"]) {
                         const actionRow = new ActionRowBuilder();
 
-                        // Handle different component types
                         if (comp.type === "button") {
                             const button = new ButtonBuilder()
                                 .setCustomId(comp.custom_id)
                                 .setLabel(comp.label);
 
-                            // Set the style (default to PRIMARY if not specified)
-                            const style = comp.style || "primary";
-                            const buttonStyle =
-                                {
-                                    primary: ButtonStyle.Primary,
-                                    secondary: ButtonStyle.Secondary,
-                                    success: ButtonStyle.Success,
-                                    danger: ButtonStyle.Danger,
-                                    link: ButtonStyle.Link,
-                                }[style.toLowerCase()] || ButtonStyle.Primary;
+                            const styleMap = {
+                                primary: ButtonStyle.Primary,
+                                secondary: ButtonStyle.Secondary,
+                                success: ButtonStyle.Success,
+                                danger: ButtonStyle.Danger,
+                                link: ButtonStyle.Link,
+                            };
+                            button.setStyle(
+                                styleMap[comp.style?.toLowerCase()] ||
+                                    ButtonStyle.Primary
+                            );
 
-                            button.setStyle(buttonStyle);
-
-                            // Add emoji if specified
                             if (comp.emoji_id) {
                                 button.setEmoji({
                                     id: String(comp.emoji_id),
@@ -59,7 +56,6 @@ module.exports = {
                                 });
                             }
 
-                            // Set disabled state if specified
                             if (comp.disabled !== undefined) {
                                 button.setDisabled(comp.disabled);
                             }
@@ -72,18 +68,50 @@ module.exports = {
                 }
             }
 
-            // Send the message with the content and components
-            await interaction.reply({
+            const response = await interaction.reply({
                 content: commandData.content,
                 components: components,
                 flags: MessageFlags.Ephemeral,
             });
+
+            if (components.length > 0) {
+                const collector = response.createMessageComponentCollector({
+                    componentType: ComponentType.Button,
+                    time: 300_000,
+                });
+
+                collector.on("collect", async (i) => {
+                    const btnConfig = commandData.components.find(
+                        (c) => c.custom_id === i.customId
+                    );
+
+                    if (btnConfig && btnConfig.onInteraction) {
+                        await i.reply({
+                            content: btnConfig.onInteraction.content,
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    } else {
+                        await i.reply({
+                            content: "This button is not configured.",
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    }
+                });
+
+                collector.on("end", () => {
+                    // You can disable buttons here if you want,
+                    // or just let them fail silently after 5 mins.
+                });
+            }
         } catch (error) {
             console.error("Error in commands command:", error);
-            await interaction.reply({
-                content: "An error occurred while fetching the command list.",
-                flags: MessageFlags.Ephemeral,
-            });
+            if (!interaction.replied) {
+                await interaction.reply({
+                    content:
+                        "An error occurred while fetching the command list.",
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
         }
     },
 };

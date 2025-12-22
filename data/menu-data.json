@@ -69,7 +69,7 @@
                 "style": "primary",
                 "custom_id": "rules-info",
                 "emoji_name": "rules",
-                "emoji_id": "1316398656462786703",
+                "emoji_id": "1452315020691111987",
                 "emoji_animated": false,
                 "onInteraction": {
                     "type": "message",
