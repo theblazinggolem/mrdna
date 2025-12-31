@@ -4,7 +4,6 @@ const {
     StringSelectMenuBuilder,
     ButtonBuilder,
     ButtonStyle,
-    ComponentType,
     MessageFlags,
 } = require("discord.js");
 
@@ -12,8 +11,8 @@ const ROLE_CATEGORIES = [
     {
         id: "lvl_25",
         label: "Level 25+ Gradients",
-        minId: "1375397609908469800", // Bottom boundary
-        maxId: "1375397935050919997", // Top boundary
+        minId: "1375397609908469800",
+        maxId: "1375397935050919997",
         requiredRoles: [
             "843856166994968597",
             "843856481288060978",
@@ -66,21 +65,18 @@ module.exports = {
         .setDescription("Pick your cosmetic roles"),
 
     async execute(interaction) {
-        const { guild, member } = interaction;
-
+        const { guild } = interaction;
         let components = [];
-        let allCosmeticRoleIds = [];
 
         await guild.roles.fetch();
 
-        // 1. Build the menus (Render ALL, regardless of permissions)
+        // 1. Build the menus
         for (const cat of ROLE_CATEGORIES) {
             const minRole = guild.roles.cache.get(cat.minId);
             const maxRole = guild.roles.cache.get(cat.maxId);
 
             if (!minRole || !maxRole) continue;
 
-            // Find roles physically between min and max
             const rolesInCat = guild.roles.cache.filter(
                 (r) =>
                     r.position > Math.min(minRole.position, maxRole.position) &&
@@ -88,17 +84,11 @@ module.exports = {
                     r.name !== "@everyone"
             );
 
-            // Add these to our master unequip list (so we can remove them later)
-            rolesInCat.forEach((r) => allCosmeticRoleIds.push(r.id));
-
-            // Only add the menu if the category actually has roles in it
             if (rolesInCat.size > 0) {
-                // Sort by position (descending usually looks better)
                 const sortedRoles = rolesInCat.sort(
                     (a, b) => b.position - a.position
                 );
 
-                // Discord limits menus to 25 items
                 const menuOptions = sortedRoles
                     .map((r) => ({
                         label: r.name,
@@ -107,7 +97,7 @@ module.exports = {
                     .slice(0, 25);
 
                 const menu = new StringSelectMenuBuilder()
-                    .setCustomId(`select_${cat.id}`) // We embed the ID here to find it later
+                    .setCustomId(`select_${cat.id}`) // <--- GLOBAL ID
                     .setPlaceholder(`Select: ${cat.label}`)
                     .addOptions(menuOptions);
 
@@ -115,118 +105,26 @@ module.exports = {
             }
         }
 
-        // Add Unequip Button at the bottom
+        // 2. Add Unequip Button
         const unequipBtn = new ButtonBuilder()
-            .setCustomId("unequip_all")
+            .setCustomId("unequip_all") // <--- GLOBAL ID
             .setLabel("Unequip All Cosmetics")
             .setStyle(ButtonStyle.Danger);
 
         components.push(new ActionRowBuilder().addComponents(unequipBtn));
 
-        // --- 2. SEND INITIAL MESSAGE (EPHEMERAL) ---
-        // We use MessageFlags.Ephemeral for modern DJS handling
-        const response = await interaction.reply({
+        if (components.length === 0) {
+            return interaction.reply({
+                content: "No cosmetic roles found in configuration.",
+                flags: MessageFlags.Ephemeral,
+            });
+        }
+
+        // 3. Send Message (NO COLLECTOR)
+        await interaction.reply({
             content: "Select a cosmetic role below:",
             components: components,
             flags: MessageFlags.Ephemeral,
-        });
-
-        // --- 3. LOCAL COLLECTOR ---
-        const collector = response.createMessageComponentCollector({
-            time: 300000, // 5 Minutes
-        });
-
-        collector.on("collect", async (i) => {
-            // Safety check: Only the original command user can interact
-            // (Though with ephemeral responses, others usually can't see it anyway)
-            if (i.user.id !== interaction.user.id) return;
-
-            const targetMember = i.member;
-
-            try {
-                // === HANDLE UNEQUIP ===
-                if (i.customId === "unequip_all") {
-                    const rolesToRemove = targetMember.roles.cache.filter((r) =>
-                        allCosmeticRoleIds.includes(r.id)
-                    );
-
-                    if (rolesToRemove.size > 0) {
-                        await targetMember.roles.remove(rolesToRemove);
-                        await i.reply({
-                            content: `Removed ${rolesToRemove.size} cosmetic roles.`,
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    } else {
-                        await i.reply({
-                            content:
-                                "You don't have any cosmetic roles equipped.",
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    }
-                }
-
-                // === HANDLE SELECTION ===
-                else if (i.customId.startsWith("select_")) {
-                    // Extract the category ID from the customId (remove "select_")
-                    const categoryId = i.customId.replace("select_", "");
-                    const categoryConfig = ROLE_CATEGORIES.find(
-                        (c) => c.id === categoryId
-                    );
-
-                    // --- CHECK PERMISSIONS HERE ---
-                    const required = categoryConfig
-                        ? categoryConfig.requiredRoles
-                        : [];
-                    const isAuthorized =
-                        required.length === 0 ||
-                        required.some((reqId) =>
-                            targetMember.roles.cache.has(reqId)
-                        );
-
-                    if (!isAuthorized) {
-                        // Generate a nice list of missing roles names
-                        const missingRolesNames = required
-                            .map((id) => `<@&${id}>`) // Create mentions
-                            .join(", ");
-
-                        return await i.reply({
-                            content: `You do not have permission to select roles from **${categoryConfig.label}**.`,
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    }
-
-                    const selectedRoleId = i.values[0];
-                    const selectedRole = guild.roles.cache.get(selectedRoleId);
-
-                    // Remove ALL currently equipped cosmetic roles (from ALL categories)
-                    const currentCosmetics = targetMember.roles.cache.filter(
-                        (r) => allCosmeticRoleIds.includes(r.id)
-                    );
-
-                    // Remove old ones
-                    if (currentCosmetics.size > 0) {
-                        await targetMember.roles.remove(currentCosmetics);
-                    }
-
-                    // Add new one
-                    if (selectedRole) {
-                        await targetMember.roles.add(selectedRole);
-                        await i.reply({
-                            content: `Equipped <@&${selectedRole.id}>`,
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    }
-                }
-            } catch (err) {
-                console.error("Role Error:", err);
-                if (!i.replied && !i.deferred) {
-                    await i.reply({
-                        content:
-                            "Error changing roles. My role might be too low in the list.",
-                        flags: MessageFlags.Ephemeral,
-                    });
-                }
-            }
         });
     },
 };
