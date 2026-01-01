@@ -100,12 +100,17 @@ module.exports = {
                 ? `Transcript for ${targetUser.toString()} (${
                       allMessages.length
                   } msgs).`
-                : `Transcript of ${allMessages.length} messages.`;
+                : `Transcript of ${allMessages.length} messages for ${interaction.channel} (${interaction.channel.name}).`;
 
             // Create Button (GLOBAL ID)
+            // If we know the user, append their ID to the customID so interactionCreate knows who it is
+            const buttonCustomId = targetUser
+                ? `send_to_logs_${targetUser.id}`
+                : "send_to_logs";
+
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
-                    .setCustomId("send_to_logs") // <--- GLOBAL ID
+                    .setCustomId(buttonCustomId)
                     .setLabel("Send to Logs")
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("📂")

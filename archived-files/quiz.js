@@ -10,7 +10,7 @@ const {
 } = require("discord.js");
 
 const resultsChannelId = "1439264250471252058";
-const quizQuestions = require("../../data/quiz-data.js");
+const quizQuestions = require("../data/quiz-data.js");
 
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
