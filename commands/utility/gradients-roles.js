@@ -65,12 +65,15 @@ module.exports = {
         .setDescription("Pick your cosmetic roles"),
 
     async execute(interaction) {
+        // 1. Defer Immediately (Fixes "Unknown Interaction" timeout)
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         const { guild } = interaction;
         let components = [];
 
         await guild.roles.fetch();
 
-        // 1. Build the menus
+        // 2. Build the menus
         for (const cat of ROLE_CATEGORIES) {
             const minRole = guild.roles.cache.get(cat.minId);
             const maxRole = guild.roles.cache.get(cat.maxId);
@@ -97,7 +100,7 @@ module.exports = {
                     .slice(0, 25);
 
                 const menu = new StringSelectMenuBuilder()
-                    .setCustomId(`select_${cat.id}`) // <--- GLOBAL ID
+                    .setCustomId(`select_${cat.id}`)
                     .setPlaceholder(`Select: ${cat.label}`)
                     .addOptions(menuOptions);
 
@@ -105,26 +108,25 @@ module.exports = {
             }
         }
 
-        // 2. Add Unequip Button
+        // 3. Add Unequip Button
         const unequipBtn = new ButtonBuilder()
-            .setCustomId("unequip_all") // <--- GLOBAL ID
+            .setCustomId("unequip_all")
             .setLabel("Unequip All Cosmetics")
             .setStyle(ButtonStyle.Danger);
 
         components.push(new ActionRowBuilder().addComponents(unequipBtn));
 
         if (components.length === 0) {
-            return interaction.reply({
+            // Change reply to editReply
+            return interaction.editReply({
                 content: "No cosmetic roles found in configuration.",
-                flags: MessageFlags.Ephemeral,
             });
         }
 
-        // 3. Send Message (NO COLLECTOR)
-        await interaction.reply({
+        // 4. Send Message (Change reply to editReply)
+        await interaction.editReply({
             content: "Select a cosmetic role below:",
             components: components,
-            flags: MessageFlags.Ephemeral,
         });
     },
 };

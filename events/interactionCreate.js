@@ -12,10 +12,7 @@ const commandData = require("../data/command-data.json");
 const TRANSCRIPT_LOG_CHANNEL_ID = "915884828153511946";
 
 // Staff Role IDs (Used for filtering "Ticket Owners" in logs)
-const STAFF_ROLE_IDS = [
-    "913864890916147270", // Admin
-    "857990235194261514", // Trial
-];
+const STAFF_ROLE_IDS = ["913864890916147270", "857990235194261514"];
 
 // Config for Gradient Roles
 const ROLE_CATEGORIES = [
