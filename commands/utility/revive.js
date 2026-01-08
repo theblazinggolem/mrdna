@@ -1,21 +1,22 @@
-const {
-    SlashCommandBuilder,
-    MessageFlags,
-    PermissionFlagsBits,
-} = require("discord.js");
-
-const activeMonitors = new Map();
+const { SlashCommandBuilder, MessageFlags } = require("discord.js");
 
 const channelCooldowns = new Map();
+
+const BOOSTER_ROLE_ID = "8559544349356195841";
+const REVIVE_ROLE_ID = "858331630997340170";
+const LOG_CHANNEL_ID = "1350108952041492561";
+
+const GLOBAL_COOLDOWN_MS = 3 * 60 * 60 * 1000;
+const BOOSTER_COOLDOWN_MS = 60 * 60 * 1000;
 
 const forbiddenPatterns = [
     "porn",
     "fuck",
     "bitch",
     "hitler",
-    /\b[gG](?:[oO0]{2,})[nN]\w*\b/, //goon
-    /\bn[i1]g{2,}(?:a|er)?s?\b/i, //n word
-    /f[a@]g{1,2}[o0]ts?/, // f word
+    /\b[gG](?:[oO0]{2,})[nN]\w*\b/,
+    /\bn[i1]g{2,}(?:a|er)?s?\b/i,
+    /f[a@]g{1,2}[o0]ts?/,
     /r[e3]t[a@]rd/,
 ];
 
@@ -32,84 +33,110 @@ module.exports = {
 
     async execute(interaction) {
         try {
-            const channel = interaction.channel;
+            const { guild, channel, member, user } = interaction;
             const topic = interaction.options.getString("topic");
-            const roleId = "858331630997340170";
 
-            // Check for ping injection attempts
-            const pingPatterns = [
-                /@everyone/,
-                /@here/,
-                /<@&?\d+>/, // Matches both role mentions (<@&role_id>) and user mentions (<@user_id>)
-            ];
-
-            for (const pattern of pingPatterns) {
-                if (pattern.test(topic)) {
-                    await interaction.reply({
-                        content:
-                            "Please send the command again without any mentions (@everyone, @here, or role/user mentions).",
-                        flags: MessageFlags.Ephemeral,
-                    });
-                    return;
-                }
+            const pingPatterns = [/@everyone/, /@here/, /<@&?\d+>/];
+            if (pingPatterns.some((p) => p.test(topic))) {
+                return interaction.reply({
+                    content:
+                        "Please send the command again without any mentions.",
+                    flags: MessageFlags.Ephemeral,
+                });
             }
 
-            // --- NEW: Check for forbidden words or patterns ---
             for (const pattern of forbiddenPatterns) {
-                // This handles both strings and RegExp objects from the array.
-                // For strings, it creates a case-insensitive regex that matches the whole word.
                 const regex =
                     pattern instanceof RegExp
                         ? pattern
                         : new RegExp(`\\b${pattern}\\b`, "i");
-
                 if (regex.test(topic)) {
-                    await interaction.reply({
+                    const logChannel = guild.channels.cache.get(LOG_CHANNEL_ID);
+                    if (logChannel) {
+                        const logMsg = `**Revive Blocked**\n**User:** <@${
+                            user.id
+                        }> (${
+                            user.id
+                        })\n**Channel:** ${channel.toString()}\n**Content:** \`${topic}\``;
+                        await logChannel.send({ content: logMsg });
+                    }
+
+                    return interaction.reply({
                         content:
-                            "Your topic contains a forbidden word or pattern. Please try again.",
+                            "Your topic contains a forbidden word or pattern.",
                         flags: MessageFlags.Ephemeral,
                     });
-                    return; // Stop the command execution
                 }
             }
 
-            // Restored cooldown check
-            const cooldownTime = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
-            const lastUsed = channelCooldowns.get(channel.id);
-            if (lastUsed) {
-                const timeLeft = cooldownTime - (Date.now() - lastUsed);
-                if (timeLeft > 0) {
-                    const cooldownEndTime = Math.floor(
-                        (lastUsed + cooldownTime) / 1000
+            const now = Date.now();
+            let cooldownData = channelCooldowns.get(channel.id) || {
+                globalUnlock: 0,
+                boosterUnlock: 0,
+            };
+
+            const isBooster = member.roles.cache.has(BOOSTER_ROLE_ID);
+            const isGlobalCooldownActive = now < cooldownData.globalUnlock;
+
+            if (isGlobalCooldownActive) {
+                if (isBooster) {
+                    if (now < cooldownData.boosterUnlock) {
+                        const timeLeft = Math.floor(
+                            cooldownData.boosterUnlock / 1000
+                        );
+                        return interaction.reply({
+                            content: `Command bypass on cooldown. Next revive <t:${timeLeft}:R>`,
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    }
+                    cooldownData.boosterUnlock = now + BOOSTER_COOLDOWN_MS;
+                } else {
+                    const globalTime = Math.floor(
+                        cooldownData.globalUnlock / 1000
+                    );
+                    const boosterTime = Math.floor(
+                        cooldownData.boosterUnlock / 1000
                     );
 
-                    await interaction.reply({
-                        content: `This command is on cooldown until <t:${cooldownEndTime}:t>.`,
+                    const boosterStatus =
+                        now < cooldownData.boosterUnlock
+                            ? `<t:${boosterTime}:R>`
+                            : "**Available Now**";
+
+                    return interaction.reply({
+                        content: `Command is on cooldown. Next revive <t:${globalTime}:R>\n-# Boosters get lesser cooldown, next revive ${boosterStatus}`,
                         flags: MessageFlags.Ephemeral,
                     });
-                    return;
+                }
+            } else {
+                cooldownData.globalUnlock = now + GLOBAL_COOLDOWN_MS;
+                cooldownData.boosterUnlock = now + BOOSTER_COOLDOWN_MS;
+            }
+
+            channelCooldowns.set(channel.id, cooldownData);
+
+            const linkRegex = /https?:\/\/\S+/;
+            if (linkRegex.test(topic)) {
+                const logChannel = guild.channels.cache.get(LOG_CHANNEL_ID);
+                if (logChannel) {
+                    const logMsg = `**Chat Revive Link Detected**\n**User:** <@${
+                        user.id
+                    }> (${
+                        user.id
+                    })\n**Channel:** ${channel.toString()}\n**Content:** ${topic}`;
+                    await logChannel.send({ content: logMsg });
                 }
             }
 
-            // Set cooldown timestamp
-            channelCooldowns.set(channel.id, Date.now());
-
-            // Use the working approach with direct role ping
-            console.log("Sending message with direct role ping...");
-
+            // 5. Send Revive
             await interaction.reply({
-                content: `<@&${roleId}> Let's discuss: ${topic}`,
-                allowedMentions: {
-                    roles: [roleId],
-                },
+                content: `<@&${REVIVE_ROLE_ID}> Let's discuss: ${topic}`,
+                allowedMentions: { roles: [REVIVE_ROLE_ID] },
             });
-
-            console.log("Message sent with allowedMentions!");
         } catch (error) {
             console.error("Error in revive command:", error);
             await interaction.reply({
-                content:
-                    "There was an error sending the message. Please try again.",
+                content: "There was an error sending the message.",
                 flags: MessageFlags.Ephemeral,
             });
         }
