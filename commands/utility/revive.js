@@ -2,12 +2,19 @@ const { SlashCommandBuilder, MessageFlags } = require("discord.js");
 
 const channelCooldowns = new Map();
 
-const BOOSTER_ROLE_ID = "8559544349356195841";
+const BOOSTER_ROLE_ID = "855954434935619584";
 const REVIVE_ROLE_ID = "858331630997340170";
 const LOG_CHANNEL_ID = "1350108952041492561";
-
 const GLOBAL_COOLDOWN_MS = 3 * 60 * 60 * 1000;
 const BOOSTER_COOLDOWN_MS = 60 * 60 * 1000;
+
+// Test Server Config
+// const BOOSTER_ROLE_ID = "1194147739517329478";
+// const REVIVE_ROLE_ID = "932906148326154280";
+// const LOG_CHANNEL_ID = "850979723882266635";
+// const GLOBAL_COOLDOWN_MS = 3 * 60 * 1000;
+// const BOOSTER_COOLDOWN_MS = 60 * 1000;
+//
 
 const forbiddenPatterns = [
     "porn",
@@ -130,7 +137,7 @@ module.exports = {
 
             // 5. Send Revive
             await interaction.reply({
-                content: `<@&${REVIVE_ROLE_ID}> Let's discuss: ${topic}`,
+                content: `<@&${REVIVE_ROLE_ID}> Let's discuss: ${topic}\n-# if you don't want to get pinged, go to <id:customize> & remove the role`,
                 allowedMentions: { roles: [REVIVE_ROLE_ID] },
             });
         } catch (error) {
