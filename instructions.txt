@@ -1,0 +1,55 @@
+2. The Workflow Logic
+
+Please write the code to handle this specific flow:
+
+Initial Trigger: A command /setup-apps sends the main message defined in the root of the JSON.
+
+Start Application: User clicks "Staff" button -> Bot replies Ephemerally with the message defined in onInteraction (Select Menu + Disabled Submit Button).
+
+Part Selection:
+
+User selects "Part 1" from the menu.
+
+Bot shows the Modal defined in onInteraction for that option.
+
+Modal Submission & Caching:
+
+When a modal is submitted, save the data to a temporary cache (Map or Redis). Do NOT send to DB yet.
+
+Edit the Ephemeral Message:
+
+Change the emoji of the completed part in the Select Menu to ✅.
+
+Update the description to say "(Completed)".
+
+Completion Check: Check if all parts in the select menu are completed.
+
+If ALL parts are done -> Enable the "Submit Application" button.
+
+Final Submission:
+
+User clicks "Submit Application".
+
+Retrieve all cached data.
+
+Save to Neon DB (Table applications: user_id, data, status, votes).
+
+Post to Log Channel: Send a formatted embed to the submission_channel ID found in submit_config.
+
+Add Buttons: Attach the Vote (Yes/No/Neutral) and Thread buttons from submit_config to the log message.
+
+Voting System:
+
+Clicking Yes/No/Neutral updates the DB entry and edits the Log Message embed to show the new vote count.
+
+Clicking "Create Thread" creates a thread on that message.
+
+3. Requirements
+
+Use discord.js v14 components (ActionRowBuilder, ModalBuilder, etc.).
+
+Handle the logic where users can re-open a completed modal to edit their answer before final submission.
+
+Ensure the "Action Row" indices in the JSON (0, 1, 2, 3) are respected when building Modals.
+
+Write clean, modular code.
