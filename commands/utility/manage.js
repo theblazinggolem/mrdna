@@ -11,7 +11,7 @@ const {
 const db = require("../../db.js");
 
 const STAFF_ROLE_ID = "867964544717295646";
-const LOG_CHANNEL_ID = "1350108952041492561";
+const LOG_CHANNEL_ID = "1461971930880938129";
 const QUOTES_TABLE = "quotes";
 const WORDLE_TABLE = "wordle_jurassic";
 
@@ -29,7 +29,7 @@ async function sendLog(interaction, header, contentCodeBlock) {
             .catch(() => null);
         if (channel) {
             await channel.send(
-                `${header} by <@${interaction.user.id}>\n${contentCodeBlock}`
+                `${header} by ${interaction.user.username} (${interaction.user.id})\n${contentCodeBlock}`
             );
         }
     } catch (err) {
@@ -244,7 +244,7 @@ module.exports = {
                 }
 
                 if (addedRecords.length > 0) {
-                    const header = `**Wordle Bulk Added** by <@${interaction.user.id}>`;
+                    const header = `**Wordle Bulk Added** by ${interaction.user.username} (${interaction.user.id})`;
                     // Format: "word", (new line) "word"
                     const simpleList = addedRecords
                         .map((r) => `"${r.word}"`)
