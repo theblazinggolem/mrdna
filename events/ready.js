@@ -1,5 +1,5 @@
 const { Events, ActivityType } = require("discord.js");
-
+const startKeepAlive = require("../keep_alive.js");
 module.exports = {
     name: Events.ClientReady,
     once: true,
@@ -63,5 +63,6 @@ module.exports = {
         }, 300000);
 
         console.log("Bot status rotation enabled");
+        startKeepAlive();
     },
 };

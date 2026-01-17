@@ -1,10 +1,9 @@
 require("dotenv").config();
-// Require the necessary discord.js classes
+
 const fs = require("node:fs");
 const path = require("node:path");
-// 1. Import the function (it won't start yet)
-const startKeepAlive = require("./keep_alive.js");
 
+const postActivity = require("./jobs/activityPoster");
 const {
     Client,
     Collection,
@@ -16,9 +15,14 @@ const {
 
 const token = process.env.TOKEN;
 
-// Create a new client instance
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildModeration,
+    ],
 });
 
 client.commands = new Collection();
@@ -61,10 +65,8 @@ for (const file of eventFiles) {
     }
 }
 
-// 2. Add a listener to start the server ONLY when the bot is ready
 client.once(Events.ClientReady, (c) => {
-    console.log(`Ready! Logged in as ${c.user.tag}`);
-    startKeepAlive();
+    postActivity(client);
 });
 
 client.login(token);
