@@ -14,7 +14,7 @@ module.exports = {
             );
             if (res.rows.length === 0) {
                 return interaction.reply({
-                    content: "❌ Database is empty!",
+                    content: "<:x_:1462055048526954611> Database is empty!",
                     ephemeral: true,
                 });
             }
@@ -22,7 +22,7 @@ module.exports = {
         } catch (err) {
             console.error(err);
             return interaction.reply({
-                content: "❌ Database error.",
+                content: "<:x_:1462055048526954611> Database error.",
                 ephemeral: true,
             });
         }
@@ -62,7 +62,7 @@ module.exports = {
 
             if (guess.length !== wordLength) {
                 const warning = await message.reply(
-                    `⚠️ Word must be **${wordLength}** letters long!`
+                    `<:hazard:1462056327378501738> Word must be **${wordLength}** letters long!`
                 );
                 setTimeout(() => warning.delete().catch(() => {}), 3000);
                 return;
@@ -90,7 +90,7 @@ module.exports = {
             if (guess === secretWord) {
                 isGameOver = true;
                 await message.reply(
-                    `${rowEmojis}\n🎉 **Correct!** The word was **${secretWord}**.`
+                    `${rowEmojis}\n<:checkmark:1462055059197137069> Correct! The word was ${secretWord}.`
                 );
                 collector.stop();
                 return;
@@ -99,7 +99,7 @@ module.exports = {
             if (currentTurn >= maxChances) {
                 isGameOver = true;
                 await message.reply(
-                    `${rowEmojis}\n**Game Over.** The word was **${secretWord}**.\n${footer}`
+                    `${rowEmojis}\n<:clock:1459169364182958244> Game Over. The word was ${secretWord}.\n${footer}`
                 );
                 collector.stop();
                 return;
@@ -111,7 +111,7 @@ module.exports = {
         collector.on("end", (collected, reason) => {
             if (reason === "time" && !isGameOver) {
                 interaction.followUp(
-                    `⏰ Time's up! The word was **${secretWord}**.`
+                    `<:slowmode:1459169352195506321> Time's up! The word was **${secretWord}**.`
                 );
             }
         });
