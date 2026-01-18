@@ -67,7 +67,8 @@ module.exports = {
 
         try {
             const res = await db.query(
-                `SELECT DISTINCT unnest(category) as cat FROM ${tableName} ORDER BY cat ASC`
+                `SELECT name as cat FROM wordle_categories WHERE type = $1 ORDER BY name ASC`,
+                [mode]
             );
             const choices = res.rows
                 .map((row) => row.cat)
