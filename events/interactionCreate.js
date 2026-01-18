@@ -10,8 +10,6 @@ const menuData = require("../data/menu-data.json");
 const commandData = require("../data/command-data.json");
 
 const TRANSCRIPT_LOG_CHANNEL_ID = "915884828153511946";
-
-// Staff Role IDs (Used for filtering "Ticket Owners" in logs)
 const STAFF_ROLE_IDS = ["913864890916147270", "857990235194261514"];
 
 // Config for Gradient Roles
@@ -77,16 +75,48 @@ module.exports = {
                     interaction.commandName
                 );
                 if (!command) return;
-                await command.execute(interaction);
+
+                try {
+                    await command.execute(interaction);
+                } catch (error) {
+                    console.error(error);
+                    if (interaction.replied || interaction.deferred) {
+                        await interaction.followUp({
+                            content:
+                                "There was an error executing this command!",
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    } else {
+                        await interaction.reply({
+                            content:
+                                "There was an error executing this command!",
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    }
+                }
                 return;
             }
 
-            // 2. BUTTONS
+            // 2. AUTOCOMPLETE (NEW - REQUIRED FOR WORDLE CATEGORIES)
+            if (interaction.isAutocomplete()) {
+                const command = interaction.client.commands.get(
+                    interaction.commandName
+                );
+                if (!command) return;
+
+                try {
+                    await command.autocomplete(interaction);
+                } catch (error) {
+                    console.error(error);
+                }
+                return;
+            }
+
+            // 3. BUTTONS
             if (interaction.isButton()) {
                 const customId = interaction.customId;
 
                 // --- A. Transcript Logging ---
-                // Checks if ID is "send_to_logs" OR "send_to_logs_USERID"
                 if (customId.startsWith("send_to_logs")) {
                     const attachment = interaction.message.attachments.first();
                     if (!attachment) {
@@ -97,10 +127,7 @@ module.exports = {
                         });
                     }
 
-                    // 1. Determine who the ticket is FOR
                     let ticketOwnersText = "";
-
-                    // Check if specific ID passed in button (send_to_logs_12345)
                     const splitId = customId.split("_");
                     const specificUserId =
                         splitId.length > 3 ? splitId[3] : null;
@@ -108,11 +135,9 @@ module.exports = {
                     if (specificUserId) {
                         ticketOwnersText = `<@${specificUserId}>`;
                     } else {
-                        // Scan channel for non-bot, non-staff members
-                        const members = interaction.channel.members; // Uses cache
+                        const members = interaction.channel.members;
                         const nonStaffMembers = members.filter((member) => {
                             if (member.user.bot) return false;
-                            // Check if member has ANY staff role
                             const hasStaffRole = STAFF_ROLE_IDS.some((roleId) =>
                                 member.roles.cache.has(roleId)
                             );
@@ -128,7 +153,6 @@ module.exports = {
                         }
                     }
 
-                    // Send to Log Channel
                     const logChannel = await interaction.guild.channels.fetch(
                         TRANSCRIPT_LOG_CHANNEL_ID
                     );
@@ -140,7 +164,6 @@ module.exports = {
                             files: [attachment],
                         });
 
-                        // Disable the button
                         const disabledRow = ActionRowBuilder.from(
                             interaction.message.components[0]
                         );
@@ -226,7 +249,7 @@ module.exports = {
                 }
             }
 
-            // 3. SELECT MENUS
+            // 4. SELECT MENUS
             else if (interaction.isStringSelectMenu()) {
                 const customId = interaction.customId;
                 const selectedValue = interaction.values[0];
@@ -383,7 +406,6 @@ async function handleStaffInfo(interaction) {
         const guild = interaction.guild;
         const members = await guild.members.fetch();
 
-        // These IDs are now also used in STAFF_ROLE_IDS at the top
         const roles = {
             admin: guild.roles.cache.get("913864890916147270"),
             senior: guild.roles.cache.get("867964544717295646"),
