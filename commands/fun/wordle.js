@@ -198,7 +198,7 @@ module.exports = {
 
         // Initial embed has no footer hint text because hints only unlock in last 3 guesses
         await interaction.editReply({
-            content: `**Mode: ${mode.toUpperCase()}**\n${emptyRow}\n-# Length: ${wordLength} | Chances: ${maxChances} | Ends ${timeString}, type 'extend' to increase time, type 'end game' to end`,
+            content: `${emptyRow}\n-# Length: ${wordLength} | Chances: ${maxChances} | Ends ${timeString}, type 'extend' to increase time, type 'end game' to end`,
         });
 
         const collector = interaction.channel.createMessageCollector({
@@ -278,7 +278,7 @@ module.exports = {
                     playerStats.set(userId, stats);
                     await safeReply(
                         message,
-                        `${EMOJIS.UNKNOWN} Game stopped. The word was *${secretWord.toLowerCase()}*.\n${EMOJIS.SLOWMODE} **Rage Quit Detected.** You are now on cooldown for 5 minutes.`
+                        `${EMOJIS.UNKNOWN} Game stopped. The word was *${secretWord.toLowerCase()}*.\n${EMOJIS.SLOWMODE} You are now on cooldown for 5 minutes for ending too many games without completion.`
                     );
                 } else {
                     playerStats.set(userId, stats);
@@ -322,7 +322,7 @@ module.exports = {
             const rowEmojis = generateCustomRow(content, secretWord, appEmojis);
 
             // Only show "Type 'hint'" in footer if in danger zone (last 3 guesses)
-            const hintPrompt = remaining <= 3 ? " | Type 'hint'" : "";
+            const hintPrompt = remaining <= 3 ? " | Type 'hint' to get a hint" : "";
             const footer = `-# ${remaining} guesses left | Ends ${timeString}${hintPrompt}`;
 
             if (content === secretWord) {
