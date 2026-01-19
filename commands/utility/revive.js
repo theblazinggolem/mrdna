@@ -45,8 +45,9 @@ module.exports = {
 
     async execute(interaction) {
         try {
-            // 0. Defer Immediately (Ephemeral)
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            // 0. Defer Publicly (buys 15 mins)
+            // This shows "Mr. DNA is thinking..." which we will replace with the ping.
+            await interaction.deferReply();
 
             const { guild, channel, member, user } = interaction;
             const topic = interaction.options.getString("topic");
@@ -54,9 +55,9 @@ module.exports = {
             // 1. Anti-Ping Check
             const pingPatterns = [/@everyone/, /@here/, /<@&?\d+>/];
             if (pingPatterns.some((p) => p.test(topic))) {
-                return interaction.editReply(
-                    "Please send the command again without any mentions."
-                );
+                return interaction.editReply({
+                    content: "Please send the command again without any mentions."
+                });
             }
 
             // 2. Bad Word Check
@@ -74,22 +75,20 @@ module.exports = {
                             })\n**Channel:** ${channel.toString()}\n**Content:** \`${topic}\``;
                         await logChannel.send({ content: logMsg });
                     }
-                    return interaction.editReply(
-                        "<:hazard:1462056327378501738> Your topic contains a forbidden word or pattern."
-                    );
+                    return interaction.editReply({
+                        content: "<:hazard:1462056327378501738> Your topic contains a forbidden word or pattern."
+                    });
                 }
             }
 
             // 3. Database Cooldown Check
             const now = Date.now();
 
-            // Query the DB for this channel's cooldowns
             const res = await db.query(
                 "SELECT global_unlock, booster_unlock FROM revive_cooldowns WHERE channel_id = $1",
                 [channel.id]
             );
 
-            // Default to 0 if no record exists
             let globalUnlock = 0;
             let boosterUnlock = 0;
 
@@ -103,47 +102,42 @@ module.exports = {
 
             if (isGlobalCooldownActive) {
                 if (isBooster) {
-                    // Booster Logic
                     if (now < boosterUnlock) {
                         const timeLeft = Math.floor(boosterUnlock / 1000);
-                        return interaction.editReply(
-                            `Command bypass on cooldown. Next revive <t:${timeLeft}:R>`
-                        );
+                        return interaction.editReply({
+                            content: `Command bypass on cooldown. Next revive <t:${timeLeft}:R>`
+                        });
                     }
-                    // Booster is ready -> Update cooldowns
                     boosterUnlock = now + BOOSTER_COOLDOWN_MS;
                     globalUnlock = Math.max(
                         globalUnlock,
                         now + BOOSTER_COOLDOWN_MS
                     );
                 } else {
-                    // Normal User Logic
                     const globalTime = Math.floor(globalUnlock / 1000);
                     const boosterTime = Math.floor(boosterUnlock / 1000);
-
                     const boosterStatus =
                         now < boosterUnlock
                             ? `<t:${boosterTime}:R>`
                             : "**Available Now**";
 
-                    return interaction.editReply(
-                        `Command is on cooldown. Next revive <t:${globalTime}:R>\n-# Boosters get lesser cooldown, next revive ${boosterStatus}`
-                    );
+                    return interaction.editReply({
+                        content: `Command is on cooldown. Next revive <t:${globalTime}:R>\n-# Boosters get lesser cooldown, next revive ${boosterStatus}`
+                    });
                 }
             } else {
-                // Global Unlock (No Cooldown)
                 globalUnlock = now + GLOBAL_COOLDOWN_MS;
                 boosterUnlock = now + BOOSTER_COOLDOWN_MS;
             }
 
             // 4. Save New Cooldowns to DB (Upsert)
-            await db.query(
+            db.query(
                 `INSERT INTO revive_cooldowns (channel_id, global_unlock, booster_unlock)
                  VALUES ($1, $2, $3)
                  ON CONFLICT (channel_id)
                  DO UPDATE SET global_unlock = $2, booster_unlock = $3`,
                 [channel.id, globalUnlock, boosterUnlock]
-            );
+            ).catch(err => console.error("Revive DB Save Error:", err));
 
             // 5. Link Detection Log
             const linkRegex = /https?:\/\/\S+/;
@@ -153,18 +147,16 @@ module.exports = {
                     const logMsg = `**Chat Revive Link Detected**\n**User:** <@${user.id
                         }> (${user.id
                         })\n**Channel:** ${channel.toString()}\n**Content:** ${topic}`;
-                    await logChannel.send({ content: logMsg });
+                    logChannel.send({ content: logMsg }).catch(() => { });
                 }
             }
 
-            // 6. Send Revive (PUBLIC MESSAGE)
-            await channel.send({
+            // 6. Send Revive (EDIT REPLY)
+            // This replaces "Mr. DNA is thinking..." with the actual ping message.
+            await interaction.editReply({
                 content: `<@&${REVIVE_ROLE_ID}> Let's discuss: ${topic}\n-# if you don't want to get pinged, go to <id:customize> & remove the role`,
                 allowedMentions: { roles: [REVIVE_ROLE_ID] },
             });
-
-            // 7. Confirm to User (Ephemeral)
-            await interaction.editReply(`✅ Revive sent!`);
 
         } catch (error) {
             console.error("Error in revive command:", error);
