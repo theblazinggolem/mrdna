@@ -6,7 +6,7 @@ function startServer() {
             res.writeHead(200, { "Content-Type": "text/plain" });
             res.end("OK");
         })
-        .listen(8080, () => {
+        .listen(8080, "0.0.0.0", () => {
             console.log(`Keepalive server running on port 8080`);
         });
 }

@@ -4,6 +4,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const postActivity = require("./jobs/activityPoster");
+const startKeepAlive = require("./keep_alive");
+
+// Start HTTP Server immediately for health checks
+startKeepAlive();
+
 const {
     Client,
     Collection,

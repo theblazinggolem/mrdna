@@ -48,6 +48,8 @@ module.exports = {
         try {
             // 0. Defer Publicly (buys 15 mins)
             // This shows "Mr. DNA is thinking..." which we will replace with the ping.
+            // 0. Defer Publicly by default (so success is attached to user)
+            // If we fail, we will delete this and send an ephemeral follow-up.
             await interaction.deferReply();
 
             const { guild, channel, member, user } = interaction;
@@ -56,8 +58,10 @@ module.exports = {
             // 1. Anti-Ping Check
             const pingPatterns = [/@everyone/, /@here/, /<@&?\d+>/];
             if (pingPatterns.some((p) => p.test(topic))) {
-                return interaction.editReply({
-                    content: "Please send the command again without any mentions."
+                await interaction.deleteReply(); // Delete public thinking
+                return interaction.followUp({
+                    content: "Please send the command again without any mentions.",
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -76,8 +80,11 @@ module.exports = {
                             })\n**Channel:** ${channel.toString()}\n**Content:** \`${topic}\``;
                         await logChannel.send({ content: logMsg });
                     }
-                    return interaction.editReply({
-                        content: "<:hazard:1462056327378501738> Your topic contains a forbidden word or pattern."
+                    return interaction.deleteReply().then(() => {
+                        interaction.followUp({
+                            content: "<:hazard:1462056327378501738> Your topic contains a forbidden word or pattern.",
+                            flags: MessageFlags.Ephemeral
+                        });
                     });
                 }
             }
@@ -105,8 +112,10 @@ module.exports = {
                 if (isBooster) {
                     if (now < boosterUnlock) {
                         const timeLeft = Math.floor(boosterUnlock / 1000);
-                        return interaction.editReply({
-                            content: `Command bypass on cooldown. Next revive <t:${timeLeft}:R>`
+                        await interaction.deleteReply();
+                        return interaction.followUp({
+                            content: `Command bypass on cooldown. Next revive <t:${timeLeft}:R>`,
+                            flags: MessageFlags.Ephemeral
                         });
                     }
                     boosterUnlock = now + BOOSTER_COOLDOWN_MS;
@@ -122,8 +131,10 @@ module.exports = {
                             ? `<t:${boosterTime}:R>`
                             : "**Available Now**";
 
-                    return interaction.editReply({
-                        content: `Command is on cooldown. Next revive <t:${globalTime}:R>\n-# Boosters get lesser cooldown, next revive ${boosterStatus}`
+                    await interaction.deleteReply();
+                    return interaction.followUp({
+                        content: `<:slowmode:1459169352195506321> Command is on cooldown. Next revive <t:${globalTime}:R>\n-# Boosters get lesser cooldown, next revive ${boosterStatus}`,
+                        flags: MessageFlags.Ephemeral
                     });
                 }
             } else {
