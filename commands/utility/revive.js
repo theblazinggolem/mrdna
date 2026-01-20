@@ -40,6 +40,7 @@ module.exports = {
             option
                 .setName("topic")
                 .setDescription("The topic to discuss")
+                .setMinLength(20)
                 .setRequired(true)
         ),
 
