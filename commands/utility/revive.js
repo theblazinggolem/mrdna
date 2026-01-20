@@ -8,6 +8,10 @@ const LOG_CHANNEL_ID = "1350108952041492561";
 const GLOBAL_COOLDOWN_MS = 3 * 60 * 60 * 1000;
 const BOOSTER_COOLDOWN_MS = 90 * 60 * 1000;
 
+const BLACKLIST_ROLE_IDS = [
+    "1463068799166189672"
+];
+
 // Test Server Config
 // const BOOSTER_ROLE_ID = "1194147739517329478";
 // const REVIVE_ROLE_ID = "932906148326154280";
@@ -43,6 +47,14 @@ module.exports = {
         try {
             const { guild, channel, member, user } = interaction;
             const topic = interaction.options.getString("topic");
+
+            // 0. Blacklist Check
+            if (member.roles.cache.some((role) => BLACKLIST_ROLE_IDS.includes(role.id))) {
+                return interaction.reply({
+                    content: "You are blacklisted from using this command.",
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
 
             const pingPatterns = [/@everyone/, /@here/, /<@&?\d+>/];
             if (pingPatterns.some((p) => p.test(topic))) {
