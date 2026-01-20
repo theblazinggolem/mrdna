@@ -1,9 +1,12 @@
 const { SlashCommandBuilder, MessageFlags } = require("discord.js");
-const db = require("../../db"); // Import your DB connection
+
+const channelCooldowns = new Map();
 
 const BOOSTER_ROLE_ID = "855954434935619584";
 const REVIVE_ROLE_ID = "858331630997340170";
 const LOG_CHANNEL_ID = "1350108952041492561";
+const GLOBAL_COOLDOWN_MS = 3 * 60 * 60 * 1000;
+const BOOSTER_COOLDOWN_MS = 90 * 60 * 1000;
 
 // Test Server Config
 // const BOOSTER_ROLE_ID = "1194147739517329478";
@@ -12,14 +15,6 @@ const LOG_CHANNEL_ID = "1350108952041492561";
 // const GLOBAL_COOLDOWN_MS = 3 * 60 * 1000;
 // const BOOSTER_COOLDOWN_MS = 60 * 1000;
 //
-
-// 3 Hours Global, 90 Mins Booster
-const GLOBAL_COOLDOWN_MS = 3 * 60 * 60 * 1000;
-const BOOSTER_COOLDOWN_MS = 90 * 60 * 1000;
-
-// Test Config (Uncomment to test fast cooldowns)
-// const GLOBAL_COOLDOWN_MS = 3 * 60 * 1000;
-// const BOOSTER_COOLDOWN_MS = 60 * 1000;
 
 const forbiddenPatterns = [
     "porn",
@@ -40,118 +35,92 @@ module.exports = {
             option
                 .setName("topic")
                 .setDescription("The topic to discuss")
-                .setMinLength(20)
+                .setMinLength(24)
                 .setRequired(true)
         ),
 
     async execute(interaction) {
         try {
-            // 0. Defer Publicly (buys 15 mins)
-            // This shows "Mr. DNA is thinking..." which we will replace with the ping.
-            // 0. Defer Publicly by default (so success is attached to user)
-            // If we fail, we will delete this and send an ephemeral follow-up.
-            await interaction.deferReply();
-
             const { guild, channel, member, user } = interaction;
             const topic = interaction.options.getString("topic");
 
-            // 1. Anti-Ping Check
             const pingPatterns = [/@everyone/, /@here/, /<@&?\d+>/];
             if (pingPatterns.some((p) => p.test(topic))) {
-                await interaction.deleteReply(); // Delete public thinking
-                return interaction.followUp({
-                    content: "Please send the command again without any mentions.",
-                    flags: MessageFlags.Ephemeral
+                return interaction.reply({
+                    content:
+                        "Please send the command again without any mentions.",
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
-            // 2. Bad Word Check
             for (const pattern of forbiddenPatterns) {
                 const regex =
                     pattern instanceof RegExp
                         ? pattern
                         : new RegExp(`\\b${pattern}\\b`, "i");
-
                 if (regex.test(topic)) {
                     const logChannel = guild.channels.cache.get(LOG_CHANNEL_ID);
                     if (logChannel) {
-                        const logMsg = `Revive Blocked <:hazard:1462056327378501738>\n**User:** <@${user.id
+                        const logMsg = `**Revive Blocked**\n**User:** <@${user.id
                             }> (${user.id
                             })\n**Channel:** ${channel.toString()}\n**Content:** \`${topic}\``;
                         await logChannel.send({ content: logMsg });
                     }
-                    return interaction.deleteReply().then(() => {
-                        interaction.followUp({
-                            content: "<:hazard:1462056327378501738> Your topic contains a forbidden word or pattern.",
-                            flags: MessageFlags.Ephemeral
-                        });
+
+                    return interaction.reply({
+                        content:
+                            "Your topic contains a forbidden word or pattern.",
+                        flags: MessageFlags.Ephemeral,
                     });
                 }
             }
 
-            // 3. Database Cooldown Check
             const now = Date.now();
-
-            const res = await db.query(
-                "SELECT global_unlock, booster_unlock FROM revive_cooldowns WHERE channel_id = $1",
-                [channel.id]
-            );
-
-            let globalUnlock = 0;
-            let boosterUnlock = 0;
-
-            if (res.rows.length > 0) {
-                globalUnlock = Number(res.rows[0].global_unlock);
-                boosterUnlock = Number(res.rows[0].booster_unlock);
-            }
+            let cooldownData = channelCooldowns.get(channel.id) || {
+                globalUnlock: 0,
+                boosterUnlock: 0,
+            };
 
             const isBooster = member.roles.cache.has(BOOSTER_ROLE_ID);
-            const isGlobalCooldownActive = now < globalUnlock;
+            const isGlobalCooldownActive = now < cooldownData.globalUnlock;
 
             if (isGlobalCooldownActive) {
                 if (isBooster) {
-                    if (now < boosterUnlock) {
-                        const timeLeft = Math.floor(boosterUnlock / 1000);
-                        await interaction.deleteReply();
-                        return interaction.followUp({
+                    if (now < cooldownData.boosterUnlock) {
+                        const timeLeft = Math.floor(
+                            cooldownData.boosterUnlock / 1000
+                        );
+                        return interaction.reply({
                             content: `Command bypass on cooldown. Next revive <t:${timeLeft}:R>`,
-                            flags: MessageFlags.Ephemeral
+                            flags: MessageFlags.Ephemeral,
                         });
                     }
-                    boosterUnlock = now + BOOSTER_COOLDOWN_MS;
-                    globalUnlock = Math.max(
-                        globalUnlock,
-                        now + BOOSTER_COOLDOWN_MS
-                    );
+                    cooldownData.boosterUnlock = now + BOOSTER_COOLDOWN_MS;
                 } else {
-                    const globalTime = Math.floor(globalUnlock / 1000);
-                    const boosterTime = Math.floor(boosterUnlock / 1000);
+                    const globalTime = Math.floor(
+                        cooldownData.globalUnlock / 1000
+                    );
+                    const boosterTime = Math.floor(
+                        cooldownData.boosterUnlock / 1000
+                    );
+
                     const boosterStatus =
-                        now < boosterUnlock
+                        now < cooldownData.boosterUnlock
                             ? `<t:${boosterTime}:R>`
                             : "**Available Now**";
 
-                    await interaction.deleteReply();
-                    return interaction.followUp({
-                        content: `<:slowmode:1459169352195506321> Command is on cooldown. Next revive <t:${globalTime}:R>\n-# Boosters get lesser cooldown, next revive ${boosterStatus}`,
-                        flags: MessageFlags.Ephemeral
+                    return interaction.reply({
+                        content: `Command is on cooldown. Next revive <t:${globalTime}:R>\n-# Boosters get lesser cooldown, next revive ${boosterStatus}`,
+                        flags: MessageFlags.Ephemeral,
                     });
                 }
             } else {
-                globalUnlock = now + GLOBAL_COOLDOWN_MS;
-                boosterUnlock = now + BOOSTER_COOLDOWN_MS;
+                cooldownData.globalUnlock = now + GLOBAL_COOLDOWN_MS;
+                cooldownData.boosterUnlock = now + BOOSTER_COOLDOWN_MS;
             }
 
-            // 4. Save New Cooldowns to DB (Upsert)
-            db.query(
-                `INSERT INTO revive_cooldowns (channel_id, global_unlock, booster_unlock)
-                 VALUES ($1, $2, $3)
-                 ON CONFLICT (channel_id)
-                 DO UPDATE SET global_unlock = $2, booster_unlock = $3`,
-                [channel.id, globalUnlock, boosterUnlock]
-            ).catch(err => console.error("Revive DB Save Error:", err));
+            channelCooldowns.set(channel.id, cooldownData);
 
-            // 5. Link Detection Log
             const linkRegex = /https?:\/\/\S+/;
             if (linkRegex.test(topic)) {
                 const logChannel = guild.channels.cache.get(LOG_CHANNEL_ID);
@@ -159,28 +128,21 @@ module.exports = {
                     const logMsg = `**Chat Revive Link Detected**\n**User:** <@${user.id
                         }> (${user.id
                         })\n**Channel:** ${channel.toString()}\n**Content:** ${topic}`;
-                    logChannel.send({ content: logMsg }).catch(() => { });
+                    await logChannel.send({ content: logMsg });
                 }
             }
 
-            // 6. Send Revive (EDIT REPLY)
-            // This replaces "Mr. DNA is thinking..." with the actual ping message.
-            await interaction.editReply({
+            // 5. Send Revive
+            await interaction.reply({
                 content: `<@&${REVIVE_ROLE_ID}> Let's discuss: ${topic}\n-# if you don't want to get pinged, go to <id:customize> & remove the role`,
                 allowedMentions: { roles: [REVIVE_ROLE_ID] },
             });
-
         } catch (error) {
             console.error("Error in revive command:", error);
-            if (!interaction.replied && !interaction.deferred) {
-                // Should not happen if defer succeeded, but generic fallback
-                await interaction.reply({
-                    content: "There was an error sending the message.",
-                    flags: MessageFlags.Ephemeral,
-                });
-            } else {
-                await interaction.editReply("❌ There was an error sending the message.");
-            }
+            await interaction.reply({
+                content: "There was an error sending the message.",
+                flags: MessageFlags.Ephemeral,
+            });
         }
     },
 };
