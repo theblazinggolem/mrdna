@@ -165,4 +165,4 @@ the properties table will have entries like: [
 
 and the manage categories subcommand should be renamed to manage properties, whwrreever categories show up its should be properties.
 also since this stuff is hard to find and add i want it such that a user only has to add the main word(s), and i use an ai api like gemini to get all other details like type, diet, region, period, family, appearances, etc and add it to the database automatically. 
-they can later edit it if they want to etc.
+they can later edit it if they want to etc.ffdfd

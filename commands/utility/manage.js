@@ -793,14 +793,19 @@ async function handleBulkAdd(submission, dbChoice, user) {
     await submission.editReply(`${EMOJIS.AI} Processing ${allWords.length} words in ${chunks.length} batches...`);
 
     for (const [index, chunk] of chunks.entries()) {
+        // 1. Generate Batch Properties (One AI call per batch)
+        let batchResults = {};
         try {
-            // 1. Generate Batch Properties
-            const batchResults = await generatePropertiesBatch(chunk, dbChoice);
+            batchResults = await generatePropertiesBatch(chunk, dbChoice);
+        } catch (aiErr) {
+            console.error(`[Batch ${index + 1} AI Fail]`, aiErr);
+            // We continue processing, but props will be empty for this batch
+        }
 
-            // 2. Process each word in the chunk
-            for (const word of chunk) {
-                // If AI failed to return a key for this word, default to empty or retry? 
-                // We'll fallback to empty properties to at least save the word.
+        // 2. Process each word in the chunk INDIVIDUALLY
+        for (const word of chunk) {
+            try {
+                // If AI failed to return a key for this word, default to empty
                 const props = batchResults[word] || batchResults[word.replace(/\s/g, "")] || {};
 
                 // 3. Insert into DB (with Retry)
@@ -825,24 +830,17 @@ async function handleBulkAdd(submission, dbChoice, user) {
                         await new Promise(r => setTimeout(r, 2000));
                     }
                 }
-
-                if (res.rowCount > 0) {
-                    added.push(res.rows[0]);
-                    // We update global properties table progressively
-                    await updateGlobalProperties(dbChoice, props);
-                }
+            } catch (wordErr) {
+                console.error(`[Bulk Add Error] Word: ${word}`, wordErr);
+                errors.push(`${word} (${wordErr.message})`);
             }
-
-            // Progress update per batch
-            await submission.editReply(`${EMOJIS.AI} Processed batch ${index + 1}/${chunks.length}...`);
-
-            // Small safety delay between batches
-            await new Promise(r => setTimeout(r, 2000));
-
-        } catch (err) {
-            console.error(err);
-            errors.push(`Batch ${index + 1} failed`);
         }
+
+        // Progress update per batch
+        await submission.editReply(`${EMOJIS.AI} Processed batch ${index + 1}/${chunks.length}... (Added so far: ${added.length})`);
+
+        // Small safety delay between batches
+        await new Promise(r => setTimeout(r, 2000));
     }
 
     if (added.length > 0) {
