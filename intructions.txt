@@ -1,0 +1,168 @@
+the wordle jurassic table
+- rename the category colum to properties or remove it altogether and add a new colum,
+- the new properties column is of json data type, and its takes a json like example: {
+    "type": [
+        "theropod"
+    ],
+    "diet": [
+        "carnivore"
+    ],
+    "appearances": [
+        "Jurassic Park 1",
+        "Jurassic Park 2",
+        "Jurassic Park 3",
+        "Jurassic World",
+        "Jurassic World: Fallen Kingdom",
+        "Jurassic World: Dominion"
+    ]
+}
+
+for the paleo wordle table
+- rename the category colum to properties or remove it altogether and add a new colum,
+- the new properties column is of json data type, and its takes a json like example: {
+    "type": [
+        "theropod"
+    ],
+    "family": [
+        "Tyrannosaurid"
+    ],
+    "region": [
+        "North America",
+        "Europe"
+    ],
+    "diet": [
+        "carnivore"
+    ],
+    "period": [
+        "Cretaceous"
+    ]
+}
+
+the old wordle categories table is renamed to wordle properties and its columns
+- name is renamed to property
+- type is renamed to database
+- option_type is renamed to type
+
+so if example my input for paleo table is 
+{
+    "word": "Tyrannosaurus Rex",
+    "properties": {
+        "type": [
+            "theropod"
+        ],
+        "family": [
+            "Tyrannosaurid"
+        ],
+        "region": [
+            "North America",
+            "Europe"
+        ],
+        "diet": [
+            "carnivore"
+        ],
+        "period": [
+            "Cretaceous"
+        ]
+    }
+}
+
+the properties table will have entries like: [
+    {
+        "property": "theropod",
+        "database": "paleo",
+        "type": "type"
+    },
+    {
+        "property": "carnivore",
+        "database": "paleo",
+        "type": "diet"
+    },
+    {
+        "property": "Tyrannosaurid",
+        "database": "paleo",
+        "type": "family"
+    },
+    {
+        "property": "North America",
+        "database": "paleo",
+        "type": "region"
+    },
+    {
+        "property": "Europe",
+        "database": "paleo",
+        "type": "region"
+    },
+    {
+        "property": "Cretaceous",
+        "database": "paleo",
+        "type": "period"
+    }
+]
+etc and for an entry in the the jurassic worlde: {
+    "word": "Tyrannosaurus Rex",
+    "properties": {
+        "type": [
+            "creature" // human for human characters
+        ],
+        "diet": [
+            "carnivore"
+        ],
+        "appearances": [
+            "Jurassic Park 1",
+            "Jurassic Park 2",
+            "Jurassic Park 3",
+            "Jurassic World",
+            "Jurassic World: Fallen Kingdom",
+            "Jurassic World: Dominion",
+            "Camp Cretaceous",
+            "Chaos Theory"
+        ]
+    }
+}
+
+the properties table will have entries like: [
+    {
+        "property": "theropod",
+        "database": "jurassic",
+        "type": "type"
+    },
+    {
+        "property": "carnivore",
+        "database": "jurassic",
+        "type": "diet"
+    },
+    {
+        "property": "Jurassic Park 1",
+        "database": "jurassic",
+        "type": "appearances"
+    },
+    {
+        "property": "Jurassic Park 2",
+        "database": "jurassic",
+        "type": "appearances"
+    },
+    {
+        "property": "Jurassic Park 3",
+        "database": "jurassic",
+        "type": "appearances"
+    },
+    {
+        "property": "Jurassic World",
+        "database": "jurassic",
+        "type": "appearances"
+    },
+    {
+        "property": "Jurassic World: Fallen Kingdom",
+        "database": "jurassic",
+        "type": "appearances"
+    },
+    {
+        "property": "Jurassic World: Dominion",
+        "database": "jurassic",
+        "type": "appearances"
+    }
+]
+
+and the manage categories subcommand should be renamed to manage properties, whwrreever categories show up its should be properties.
+also since this stuff is hard to find and add i want it such that a user only has to add the main word(s), and i use an ai api like gemini to get all other details like type, diet, region, period, family, appearances, etc and add it to the database automatically. 
+they can later edit it if they want to etc.

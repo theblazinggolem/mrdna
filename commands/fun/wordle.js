@@ -7,7 +7,6 @@ const RAGE_LIMIT = 3;
 const COOLDOWN_MS = 5 * 60 * 1000;
 
 // Track active games
-// Track active games
 const activeGames = new Set();
 
 const EMOJIS = {
@@ -30,29 +29,45 @@ async function safeReply(originalMessage, content) {
     }
 }
 
+const MULTI_FILTER_ENABLED = false;
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("wordle")
         .setDescription("Play Wordle")
+        // --- JURASSIC MODE ---
         .addSubcommand((sub) =>
             sub
                 .setName("jurassic")
                 .setDescription("Play Jurassic Wordle")
                 .addStringOption((option) =>
                     option
-                        .setName("category")
-                        .setDescription("Filter by category")
+                        .setName("type")
+                        .setDescription("Filter by Type")
                         .setAutocomplete(true)
                 )
         )
+        // --- PALEO MODE ---
         .addSubcommand((sub) =>
             sub
                 .setName("paleo")
                 .setDescription("Play Paleo Wordle")
                 .addStringOption((option) =>
                     option
-                        .setName("category")
-                        .setDescription("Filter by category")
+                        .setName("type")
+                        .setDescription("Filter by Type")
+                        .setAutocomplete(true)
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName("period")
+                        .setDescription("Filter by Period")
+                        .setAutocomplete(true)
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName("diet")
+                        .setDescription("Filter by Diet")
                         .setAutocomplete(true)
                 )
         ),
@@ -62,17 +77,22 @@ module.exports = {
     // ---------------------------------------------------------
     async autocomplete(interaction) {
         const mode = interaction.options.getSubcommand();
-        const tableName = mode === "paleo" ? "wordle_paleo" : "wordle_jurassic";
-        const focusedValue = interaction.options.getFocused().toLowerCase();
+        const focusedOption = interaction.options.getFocused(true); // Get full option object
+        const focusedValue = focusedOption.value.toLowerCase();
+        const filterType = focusedOption.name; // 'type', 'period', 'diet'
 
         try {
+            // Query the properties table for specific types
             const res = await db.query(
-                `SELECT name as cat FROM wordle_categories WHERE type = $1 ORDER BY name ASC`,
-                [mode]
+                `SELECT property FROM wordle_properties 
+                 WHERE database = $1 AND type = $2 
+                 ORDER BY property ASC`,
+                [mode, filterType]
             );
+
             const choices = res.rows
-                .map((row) => row.cat)
-                .filter((cat) => cat.toLowerCase().includes(focusedValue))
+                .map((row) => row.property)
+                .filter((prop) => prop.toLowerCase().includes(focusedValue))
                 .slice(0, 25);
 
             await interaction.respond(
@@ -90,10 +110,27 @@ module.exports = {
     async execute(interaction) {
         const userId = interaction.user.id;
 
-        // 1. DETERMINE MODE & CATEGORY
+        // 1. DETERMINE MODE & FILTERS
         const mode = interaction.options.getSubcommand();
-        const categoryFilter = interaction.options.getString("category");
         const tableName = mode === "paleo" ? "wordle_paleo" : "wordle_jurassic";
+
+        const typeFilter = interaction.options.getString("type");
+        const periodFilter = interaction.options.getString("period");
+        const dietFilter = interaction.options.getString("diet");
+
+        // Count active filters
+        const activeFilters = [];
+        if (typeFilter) activeFilters.push({ key: "type", val: typeFilter });
+        if (periodFilter) activeFilters.push({ key: "period", val: periodFilter });
+        if (dietFilter) activeFilters.push({ key: "diet", val: dietFilter });
+
+        // Enforce Single Filter Rule (unless overridden)
+        if (!MULTI_FILTER_ENABLED && activeFilters.length > 1) {
+            return interaction.reply({
+                content: `${EMOJIS.HAZARD} **Too many filters!**\nPlease select only **one** filter (Type, Period, or Diet) for now.`,
+                flags: MessageFlags.Ephemeral,
+            });
+        }
 
         // 2. FAST CHECKS
         if (activeGames.has(userId)) {
@@ -132,7 +169,7 @@ module.exports = {
 
         try {
             const allWordsRes = await db.query(
-                `SELECT word, category FROM ${tableName}`
+                `SELECT word, properties FROM ${tableName}`
             );
 
             if (allWordsRes.rows.length === 0) {
@@ -146,28 +183,46 @@ module.exports = {
 
             allWordsRes.rows.forEach((row) => {
                 validWords.add(row.word.toUpperCase());
-                if (!categoryFilter) {
-                    secretPool.push(row);
-                } else {
-                    const cats = row.category.map((c) => c.toLowerCase());
-                    if (cats.includes(categoryFilter.toLowerCase())) {
-                        secretPool.push(row);
+                const props = row.properties || {};
+
+                // Filter Check
+                let pass = true;
+                for (const filter of activeFilters) {
+                    const propValues = props[filter.key]; // e.g. ["Theropod"]
+                    if (!propValues || !Array.isArray(propValues)) {
+                        pass = false;
+                        break;
                     }
+                    // Case-insensitive check
+                    const hasMatch = propValues.some(v => v.toLowerCase() === filter.val.toLowerCase());
+                    if (!hasMatch) {
+                        pass = false;
+                        break;
+                    }
+                }
+
+                if (pass) {
+                    secretPool.push(row);
                 }
             });
 
             if (secretPool.length === 0) {
                 activeGames.delete(userId);
+                const filterDesc = activeFilters.map(f => `${f.key}: ${f.val}`).join(", ");
                 return interaction.editReply(
-                    `${EMOJIS.CROSS} No words found in the **${categoryFilter}** category for ${mode}!`
+                    `${EMOJIS.CROSS} No words found with filters: **${filterDesc}**!`
                 );
             }
 
             const randomEntry =
                 secretPool[Math.floor(Math.random() * secretPool.length)];
+
+            // Prepare hints from properties
+            const hintList = Object.values(randomEntry.properties || {}).flat().filter(v => typeof v === 'string');
+
             secretData = {
                 word: randomEntry.word.toUpperCase(),
-                categories: randomEntry.category,
+                hints: hintList,
             };
         } catch (err) {
             console.error(err);
@@ -184,7 +239,6 @@ module.exports = {
         else if (wordLength >= 8) maxChances = 7;
 
         let guesses = [];
-        let hintsUsed = 0;
         let usedHints = new Set();
         let turnHintUsed = false; // Tracks if a hint was used THIS turn
 
@@ -245,21 +299,37 @@ module.exports = {
                     return;
                 }
 
-                // 3. Generate Hint from Categories
-                let availableHints = secretData.categories;
+                // 3. Generate Hint
+                let availableHints = secretData.hints;
                 if (!availableHints || availableHints.length === 0) {
-                    await safeReply(message, `${EMOJIS.UNKNOWN} No category information available.`);
+                    await safeReply(message, `${EMOJIS.UNKNOWN} No property information available.`);
                     return;
                 }
 
-                // Filter out already used hints (if possible)
+                // Filter out already used hints
                 let freshHints = availableHints.filter(h => !usedHints.has(h));
+                let hintText;
 
-                // Fallback: If ran out of unique hints, just use available ones
-                let pool = freshHints.length > 0 ? freshHints : availableHints;
+                // Logic: Prioritize fresh hints.
+                // If NO fresh hints left, and the TOTAL pool of hints is small (< 3), 
+                // we allow repeating hints so the user isn't stuck.
+                // If total pool is large, we might just say "No more hints". 
+                // But per user request: "if there are less than 3 properties... u can repeat hints"
 
-                // Pick random
-                const hintText = pool[Math.floor(Math.random() * pool.length)];
+                if (freshHints.length > 0) {
+                    // Pick a fresh one
+                    hintText = freshHints[Math.floor(Math.random() * freshHints.length)];
+                } else {
+                    // No fresh hints. 
+                    // If total hints are limited (< 3), we recycle.
+                    if (availableHints.length < 3) {
+                        hintText = availableHints[Math.floor(Math.random() * availableHints.length)];
+                    } else {
+                        // If we have plenty of hints but used them all? (Unlikely in 3 guesses but possible if spammed)
+                        // Just recycle anyway to be helpful.
+                        hintText = availableHints[Math.floor(Math.random() * availableHints.length)];
+                    }
+                }
 
                 usedHints.add(hintText);
                 turnHintUsed = true; // Mark as utilized for this turn
@@ -301,7 +371,16 @@ module.exports = {
                     setTimeout(() => warning.delete().catch(() => { }), 3000);
                 return;
             }
-            if (!/^[A-Z]+$/.test(content)) return;
+            if (!/^[A-Z0-9\s-]+$/.test(content)) return; // Allow numbers/spaces for Jurassic words usually?
+            // Actually original regexp was just [A-Z]+. 
+            // Jurassic names like "Jurassic Park 1" have numbers and spaces. 
+            // I should assume the guess input is sanitized or matching the stored format.
+            // The stored format in DB is raw string. But in game, usually we strip spaces?
+            // Original code: if (!/^[A-Z]+$/.test(content)) return;
+            // Let's stick to simple letters for now unless the user complains, or loosen it.
+            // Wait, "Tyrannosaurus Rex" has space.
+            // If the user types "TYRANNOSAURUS REX", it should work.
+            // So regex update: /^[A-Z0-9\s-]+$/
 
             if (!validWords.has(content)) {
                 const warning = await safeReply(
@@ -389,6 +468,10 @@ function generateCustomRow(guess, secret, appEmojis) {
         .map((char, i) => {
             const status = statusArr[i];
             const emojiName = `${status}_${char.toLowerCase()}`;
+            // Handle spaces/numbers in custom emojis? 
+            // If char is space, just return space? 
+            if (char === ' ') return '  ';
+
             const customEmoji = appEmojis.find((e) => e.name === emojiName);
 
             if (customEmoji) {
