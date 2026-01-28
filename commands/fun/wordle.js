@@ -17,7 +17,6 @@ const EMOJIS = {
     CHECKMARK: "<:checkmark:1462055059197137069>",
     CLOCK: "<:clock:1459169364182958244>",
 };
-
 async function safeReply(originalMessage, content) {
     try {
         return await originalMessage.reply(content);
@@ -52,24 +51,6 @@ module.exports = {
             sub
                 .setName("paleo")
                 .setDescription("Play Paleo Wordle")
-                .addStringOption((option) =>
-                    option
-                        .setName("type")
-                        .setDescription("Filter by Type")
-                        .setAutocomplete(true)
-                )
-                .addStringOption((option) =>
-                    option
-                        .setName("period")
-                        .setDescription("Filter by Period")
-                        .setAutocomplete(true)
-                )
-                .addStringOption((option) =>
-                    option
-                        .setName("diet")
-                        .setDescription("Filter by Diet")
-                        .setAutocomplete(true)
-                )
         ),
 
     // ---------------------------------------------------------
@@ -79,7 +60,13 @@ module.exports = {
         const mode = interaction.options.getSubcommand();
         const focusedOption = interaction.options.getFocused(true); // Get full option object
         const focusedValue = focusedOption.value.toLowerCase();
-        const filterType = focusedOption.name; // 'type', 'period', 'diet'
+        let filterType = focusedOption.name; // 'type', 'period', 'diet'
+
+        // Special Case: Jurassic 'Type' filter should actually look for 'category' properties
+        // (e.g. Human, Creature, Location) instead of 'type' (Theropod, etc)
+        if (mode === "jurassic" && filterType === "type") {
+            filterType = "category";
+        }
 
         try {
             // Query the properties table for specific types
@@ -107,12 +94,17 @@ module.exports = {
     // ---------------------------------------------------------
     //  EXECUTE HANDLER (The Game)
     // ---------------------------------------------------------
+    // ---------------------------------------------------------
+    //  EXECUTE HANDLER (The Game & Contribution)
+    // ---------------------------------------------------------
     async execute(interaction) {
-        const userId = interaction.user.id;
+        const subcommand = interaction.options.getSubcommand();
 
-        // 1. DETERMINE MODE & FILTERS
-        const mode = interaction.options.getSubcommand();
+        // --- GAME LOGIC ---
+        const userId = interaction.user.id;
+        const mode = subcommand;
         const tableName = mode === "paleo" ? "wordle_paleo" : "wordle_jurassic";
+        // ... rest of game logic ...
 
         const typeFilter = interaction.options.getString("type");
         const periodFilter = interaction.options.getString("period");
@@ -120,7 +112,11 @@ module.exports = {
 
         // Count active filters
         const activeFilters = [];
-        if (typeFilter) activeFilters.push({ key: "type", val: typeFilter });
+        if (typeFilter) {
+            // Jurassic Mode: 'type' filter actually targets 'category' field in JSON
+            const key = (mode === "jurassic") ? "category" : "type";
+            activeFilters.push({ key: key, val: typeFilter });
+        }
         if (periodFilter) activeFilters.push({ key: "period", val: periodFilter });
         if (dietFilter) activeFilters.push({ key: "diet", val: dietFilter });
 
@@ -279,11 +275,15 @@ module.exports = {
             if (content === "HINT") {
                 const remaining = maxChances - guesses.length;
 
-                // 1. Check if hints are unlocked (Last 3 guesses)
-                if (remaining > 3) {
+                // 1. Check if hints are unlocked
+                // Paleo: Unlocked at 5 chances left (allowing up to 5 hints if needed)
+                // Jurassic: Unlocked at 3 chances left
+                const hintUnlockThreshold = mode === "paleo" ? 5 : 3;
+
+                if (remaining > hintUnlockThreshold) {
                     const warning = await safeReply(
                         message,
-                        `${EMOJIS.HAZARD} Hints are only available in the **last 3 guesses**!`
+                        `${EMOJIS.HAZARD} Hints are only available in the **last ${hintUnlockThreshold} guesses**!`
                     );
                     setTimeout(() => warning.delete().catch(() => { }), 4000);
                     return;

@@ -287,6 +287,12 @@ module.exports = {
                 .addStringOption(o => o.setName("database").setDescription("Target DB").setRequired(true).addChoices({ name: "Jurassic", value: "jurassic" }, { name: "Paleo", value: "paleo" }))
                 .addAttachmentOption(o => o.setName("file").setDescription("The JSON file").setRequired(true))
         )
+        // --- WORDLE: AUTO-FILL PROPERTIES (New) ---
+        .addSubcommand((sub) =>
+            sub.setName("wordle-properties-fill")
+                .setDescription("Auto-fill properties for words that have none (via AI)")
+                .addStringOption(o => o.setName("database").setDescription("Target DB").setRequired(true).addChoices({ name: "Jurassic", value: "jurassic" }, { name: "Paleo", value: "paleo" }))
+        )
 
         // --- PROPERTY MANAGEMENT (Renamed from Category) ---
         .addSubcommand((sub) =>
@@ -585,6 +591,62 @@ module.exports = {
             }
         }
 
+        // ------------------------------------------------------------------
+        // PROPERTIES FILL (Auto-Complete Empty)
+        // ------------------------------------------------------------------
+        if (subcommand === "wordle-properties-fill") {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            const tableName = getTable(dbChoice);
+
+            // 1. Find words with empty properties
+            const res = await db.query(`SELECT word FROM ${tableName} WHERE properties = '{}'::jsonb OR properties IS NULL`);
+            const wordsToFill = res.rows.map(r => r.word);
+
+            if (wordsToFill.length === 0) {
+                return interaction.editReply(`${EMOJIS.CHECKMARK} No empty property words found in **${dbChoice}**.`);
+            }
+
+            // 2. Reuse Batch Logic
+            const CHUNK_SIZE = 50;
+            const chunks = [];
+            for (let i = 0; i < wordsToFill.length; i += CHUNK_SIZE) {
+                chunks.push(wordsToFill.slice(i, i + CHUNK_SIZE));
+            }
+
+            await interaction.editReply(`${EMOJIS.AI} Found ${wordsToFill.length} words to fill. Processing in ${chunks.length} batches...`);
+
+            let updatedCount = 0;
+            let errors = [];
+
+            for (const [index, chunk] of chunks.entries()) {
+                let batchResults = {};
+                try {
+                    batchResults = await generatePropertiesBatch(chunk, dbChoice);
+                } catch (aiErr) {
+                    console.error(`[Fill Batch ${index + 1} AI Fail]`, aiErr);
+                }
+
+                for (const word of chunk) {
+                    try {
+                        const props = batchResults[word] || batchResults[word.replace(/\s/g, "")] || {};
+                        // Skip if AI gave us nothing (keep it empty for next time or manual fix)
+                        if (Object.keys(props).length === 0) continue;
+
+                        await db.query(`UPDATE ${tableName} SET properties = $1 WHERE word = $2`, [props, word]);
+                        await updateGlobalProperties(dbChoice, props);
+                        updatedCount++;
+                    } catch (err) {
+                        errors.push(word);
+                    }
+                }
+                // Update progress
+                await interaction.editReply(`${EMOJIS.AI} Filled batch ${index + 1}/${chunks.length}... (Total: ${updatedCount})`);
+                await new Promise(r => setTimeout(r, 2000));
+            }
+
+            return interaction.editReply(`${EMOJIS.CHECKMARK} Done! Auto-filled properties for **${updatedCount}** words.`);
+        }
+
         // --- QUOTES LOGIC (Restored) ---
         if (subcommand.startsWith("quotes-")) {
             if (subcommand === "quotes-export") {
@@ -777,8 +839,42 @@ async function generatePropertiesBatch(wordsList, database) {
 async function handleBulkAdd(submission, dbChoice, user) {
     await submission.deferReply({ flags: MessageFlags.Ephemeral });
     const rawInput = submission.fields.getTextInputValue("words_input");
-    const allWords = rawInput.split(/[,\n]+/).map(w => w.trim().toLowerCase()).filter(w => w.length > 0);
+
+    // 1. Clean and deduplicate input
+    const allWords = [...new Set(
+        rawInput.split(/[,\n]+/)
+            .map(w => w.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, ""))
+            .filter(w => w.length > 0)
+    )];
+
+    if (allWords.length === 0) {
+        return submission.editReply(`${EMOJIS.CROSS} No valid words found.`);
+    }
+
     const tableName = getTable(dbChoice);
+
+    // 2. Check which words ALREADY exist in DB
+    // We do this in one query to save resources
+    let existingWordsSet = new Set();
+    try {
+        const res = await db.query(
+            `SELECT word FROM ${tableName} WHERE word = ANY($1)`,
+            [allWords]
+        );
+        res.rows.forEach(r => existingWordsSet.add(r.word));
+    } catch (err) {
+        console.error("Bulk Add Check Error:", err);
+        return submission.editReply(`${EMOJIS.HAZARD} Database error checking existing words.`);
+    }
+
+    // 3. Filter out existing words
+    const newWords = allWords.filter(w => !existingWordsSet.has(w));
+
+    if (newWords.length === 0) {
+        return submission.editReply(`${EMOJIS.CHECKMARK} All **${allWords.length}** words already exist in the database! No action needed.`);
+    }
+
+    const skippedCount = allWords.length - newWords.length;
 
     let added = [];
     let errors = [];
@@ -786,14 +882,14 @@ async function handleBulkAdd(submission, dbChoice, user) {
     // Chunk size 50 is reasonable for robust models like 1.5/2.0
     const CHUNK_SIZE = 50;
     const chunks = [];
-    for (let i = 0; i < allWords.length; i += CHUNK_SIZE) {
-        chunks.push(allWords.slice(i, i + CHUNK_SIZE));
+    for (let i = 0; i < newWords.length; i += CHUNK_SIZE) {
+        chunks.push(newWords.slice(i, i + CHUNK_SIZE));
     }
 
-    await submission.editReply(`${EMOJIS.AI} Processing ${allWords.length} words in ${chunks.length} batches...`);
+    await submission.editReply(`${EMOJIS.AI} Found **${newWords.length}** new words (Skipped ${skippedCount} existing). Processing in ${chunks.length} batches...`);
 
     for (const [index, chunk] of chunks.entries()) {
-        // 1. Generate Batch Properties (One AI call per batch)
+        // 4. Generate Batch Properties (One AI call per batch)
         let batchResults = {};
         try {
             batchResults = await generatePropertiesBatch(chunk, dbChoice);
@@ -802,25 +898,30 @@ async function handleBulkAdd(submission, dbChoice, user) {
             // We continue processing, but props will be empty for this batch
         }
 
-        // 2. Process each word in the chunk INDIVIDUALLY
+        // 5. Process each word in the chunk INDIVIDUALLY
         for (const word of chunk) {
             try {
                 // If AI failed to return a key for this word, default to empty
                 const props = batchResults[word] || batchResults[word.replace(/\s/g, "")] || {};
 
-                // 3. Insert into DB (with Retry)
+                // 6. Insert into DB (with Retry)
                 let retries = 3;
                 while (retries > 0) {
                     try {
                         const res = await db.query(
                             `INSERT INTO ${tableName} (word, properties, added_by) VALUES ($1, $2, $3)
-                             ON CONFLICT (word) DO UPDATE SET properties = $2 RETURNING *`,
+                             ON CONFLICT (word) DO NOTHING RETURNING *`,
                             [word, props, user.id]
                         );
 
+                        // Since we filtered beforehand, specific conflict/race conditions are rare but possible.
+                        // If rowCount > 0, we inserted it.
                         if (res.rowCount > 0) {
                             added.push(res.rows[0]);
                             await updateGlobalProperties(dbChoice, props);
+                        } else {
+                            // Race condition: it was added between our check and now?
+                            console.log(`[Bulk Add] Skipped ${word} (Duplicate found during insert)`);
                         }
                         break; // Success
                     } catch (dbErr) {
@@ -855,7 +956,7 @@ async function handleBulkAdd(submission, dbChoice, user) {
         }
     }
 
-    return submission.editReply(`${EMOJIS.CHECKMARK} Done. Added/Updated: ${added.length}. Errors (Batches): ${errors.length}\n\n${EMOJIS.HAZARD} **Disclaimer:** Properties are AI-generated & may not be 100% accurate especially for recent movies/shows (Rebirth and Chaos Theory). Please review important entries manually from the json in <#1461971930880938129>.`);
+    return submission.editReply(`${EMOJIS.CHECKMARK} Done. Added: **${added.length}**. Skipped (Existing): **${skippedCount}**. Errors: ${errors.length}\n\n${EMOJIS.HAZARD} **Disclaimer:** Properties are AI-generated & may not be 100% accurate especially for recent movies/shows (Rebirth and Chaos Theory). Please review important entries manually from the json in <#1461971930880938129>.`);
 }
 
 async function handleBulkRemove(submission, dbChoice, user) {
