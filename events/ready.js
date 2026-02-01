@@ -1,11 +1,12 @@
 const { Events, ActivityType } = require("discord.js");
-
+const db = require("../db");
 
 module.exports = {
     name: Events.ClientReady,
     once: true,
-    execute(client) {
+    async execute(client) {
         console.log(`Ready! Logged in as ${client.user.tag}`);
+
         const statusMessages = [
             {
                 name: "sequencing DNA",
@@ -63,7 +64,6 @@ module.exports = {
             client.user.setActivity(statusMessages[currentIndex]);
         }, 300000);
 
-        console.log("Bot status rotation enabled");
         console.log("Bot status rotation enabled");
     },
 };

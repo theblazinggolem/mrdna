@@ -2,7 +2,7 @@ const { Events } = require("discord.js");
 const db = require("../db");
 
 const TARGET_ROLES = ["857990235194261514", "913864890916147270"];
-const MOD_COMMAND_IDS = ["1153673809673605120"];
+const MOD_COMMAND_IDS = ["1153673809673605120", "1153673753239236690"];
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -20,7 +20,7 @@ module.exports = {
         try {
             const sub = interaction.options.getSubcommand(false);
             if (sub) actionType = sub;
-        } catch (e) {}
+        } catch (e) { }
 
         try {
             await db.query(
