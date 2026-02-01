@@ -41,6 +41,9 @@ module.exports = {
                     actionType = "manual_timeout";
                 }
                 break;
+            case AuditLogEvent.MessageDelete:
+                actionType = "manual_msg_delete";
+                break;
         }
 
         if (!actionType) return;

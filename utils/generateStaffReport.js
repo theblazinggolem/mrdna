@@ -100,7 +100,7 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
                 else if (type.includes("timeout")) stats.action_counts.timeouts++;
                 else if (type.includes("kick")) stats.action_counts.kicks++;
                 else if (type.includes("ban")) stats.action_counts.bans++;
-                else if (type.includes("purge")) stats.action_counts.purges++;
+                else if (type.includes("purge") || type.includes("delete")) stats.action_counts.purges++;
                 else stats.action_counts.other++;
             });
             reportData.active[username] = stats;

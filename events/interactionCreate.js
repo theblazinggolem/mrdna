@@ -79,7 +79,12 @@ module.exports = {
                 try {
                     await command.execute(interaction);
                 } catch (error) {
-                    console.error(error);
+                    if (error.code === 10062) {
+                        console.warn(`[Command Warning] Unknown Interaction (Timeout) for ${interaction.commandName}`);
+                    } else {
+                        console.error(error);
+                    }
+
                     try {
                         if (interaction.replied || interaction.deferred) {
                             await interaction.followUp({
@@ -94,7 +99,9 @@ module.exports = {
                         }
                     } catch (err) {
                         // Ignore secondary errors (e.g. Unknown Interaction if timed out)
-                        console.error("Failed to send error response:", err.message);
+                        if (err.code !== 10062) {
+                            console.error("Failed to send error response:", err.message);
+                        }
                     }
                 }
                 return;
