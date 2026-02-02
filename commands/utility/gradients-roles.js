@@ -67,7 +67,7 @@ module.exports = {
     async execute(interaction) {
         try {
             // 1. Defer Immediately (Fixes "Unknown Interaction" timeout)
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
             const { guild } = interaction;
             let components = [];
