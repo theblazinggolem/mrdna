@@ -1,56 +1,25 @@
 Instance created. Preparing to start...
-Instance is starting... Waiting for health checks to pass.
 Keepalive server running on port 8080
+Instance is healthy. All health checks are passing.
 Ready! Logged in as Mr. DNA#4655
 Bot status set to: sequencing DNA
 Bot status rotation enabled
-Instance is healthy. All health checks are passing.
-[Audit Log] Tracked manual_timeout by leroy.junior
-DiscordAPIError[10062]: Unknown interaction
-    at handleErrors (/workspace/node_modules/@discordjs/rest/dist/index.js:748:13)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async BurstHandler.runRequest (/workspace/node_modules/@discordjs/rest/dist/index.js:852:23)
-    at async _REST.request (/workspace/node_modules/@discordjs/rest/dist/index.js:1293:22)
-    at async ChatInputCommandInteraction.deferReply (/workspace/node_modules/discord.js/src/structures/interfaces/InteractionResponses.js:129:22)
-    at async Object.execute (/workspace/commands/fun/quote.js:9:9)
-    at async Object.execute (/workspace/events/interactionCreate.js:80:21) {
-  requestBody: { files: undefined, json: { type: 5, data: [Object] } },
-  rawError: { message: 'Unknown interaction', code: 10062 },
-  code: 10062,
-  status: 404,
-  method: 'POST',
-  url: 'https://discord.com/api/v10/interactions/1467510882555658363/aW50ZXJhY3Rpb246MTQ2NzUxMDg4MjU1NTY1ODM2MzpYTEltaVhVQVdOZ1NwZlhBaTJQNnRjMzFaejlLSzFKaUNnTlA3a3h3VHh4TGZVaFBZQzdlWVE0b3lrMDZsQTgzNWhFUlRxVTltbkhDSHI0R1FKOFcydFNXV1JkbWlxdGdkTmpJQlg0VDFiMTFESDVTQ2tBbndYVVRDQ2VvelAzNw/callback?with_response=false'
-}
-Failed to send error response: Unknown interaction
-DiscordAPIError[10062]: Unknown interaction
-    at handleErrors (/workspace/node_modules/@discordjs/rest/dist/index.js:748:13)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async BurstHandler.runRequest (/workspace/node_modules/@discordjs/rest/dist/index.js:852:23)
-    at async _REST.request (/workspace/node_modules/@discordjs/rest/dist/index.js:1293:22)
-    at async ChatInputCommandInteraction.deferReply (/workspace/node_modules/discord.js/src/structures/interfaces/InteractionResponses.js:129:22)
-    at async Object.execute (/workspace/commands/fun/quote.js:9:9)
-    at async Object.execute (/workspace/events/interactionCreate.js:80:21) {
-  requestBody: { files: undefined, json: { type: 5, data: [Object] } },
-  rawError: { message: 'Unknown interaction', code: 10062 },
-  code: 10062,
-  status: 404,
-  method: 'POST',
-  url: 'https://discord.com/api/v10/interactions/1467510925694075042/aW50ZXJhY3Rpb246MTQ2NzUxMDkyNTY5NDA3NTA0MjpNOHpjUm9MZzdJSlR1T2hyQlVKNTNIR3lNdG9XZjNkNFB1MDh5QzlQMUhqd2dMYUhGdmlOVHJ5TjhPWTAzakdkRnYzejdZUGF0REtJRDJ6dFRhNHBzbnJHWHdGcjZzeDEwaXJRblpQUGgzMGQ3Y0lEd2lRbHRka21aNExwbThWWA/callback?with_response=false'
-}
-DiscordAPIError[10062]: Unknown interaction
+[Audit Log] Tracked manual_msg_delete by theblazinggolem
+[Audit Log] Tracked manual_msg_delete by leroy.junior
+Error in revive command: DiscordAPIError[10062]: Unknown interaction
     at handleErrors (/workspace/node_modules/@discordjs/rest/dist/index.js:748:13)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
     at async BurstHandler.runRequest (/workspace/node_modules/@discordjs/rest/dist/index.js:852:23)
     at async _REST.request (/workspace/node_modules/@discordjs/rest/dist/index.js:1293:22)
     at async ChatInputCommandInteraction.reply (/workspace/node_modules/discord.js/src/structures/interfaces/InteractionResponses.js:200:22)
+    at async Object.execute (/workspace/commands/utility/revive.js:148:13)
     at async Object.execute (/workspace/events/interactionCreate.js:80:21) {
   requestBody: { files: [], json: { type: 4, data: [Object] } },
   rawError: { message: 'Unknown interaction', code: 10062 },
   code: 10062,
   status: 404,
   method: 'POST',
-  url: 'https://discord.com/api/v10/interactions/1467515169478414520/aW50ZXJhY3Rpb246MTQ2NzUxNTE2OTQ3ODQxNDUyMDpUeHp1M0Nrb0NSUmloMGJOdExYaTdpakZ2MGtjbVlaeG1BZ3lEN2RHWmlWZENrVVlXNFhQdW91b2J6UGhXV090N09LTWVjNGY3UzhhUjBQYmZmNWwwZ3N4aVliMEdwTTJId1FYM2FoZHgyZzZ1SHR3VkxUUU5TV3dRckg0elJGcw/callback?with_response=false'
+  url: 'https://discord.com/api/v10/interactions/1467720538049745114/aW50ZXJhY3Rpb246MTQ2NzcyMDUzODA0OTc0NTExNDphQVE0YjFOUjYyYnU0MVlSZFdaQ3NBYTNlOHBybHZ1czE3VjJVN1N5aVZhZU1GQWFlVVhCN2hjSDNRc0pFZDFmN1Z3NDdpOTJ0Y09ZTWFLVTkxdUF4MDl5RThtRHRGRHZBa3hLejdrM2xzVHYwV2NOeUptbnltVGlFVG9zNzZsYQ/callback?with_response=false'
 }
-Failed to send error response: Unknown interaction
-Failed to send error response: Unknown interaction
-[Audit Log] Tracked manual_ban by leroy.junior
+[Command Warning] Unknown Interaction (Timeout) for revive
+[Audit Log] Tracked manual_msg_delete by theblazinggolem

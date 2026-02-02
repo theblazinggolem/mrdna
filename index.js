@@ -7,7 +7,7 @@ const postActivity = require("./jobs/activityPoster");
 const startKeepAlive = require("./keep_alive");
 
 // Start HTTP Server immediately for health checks
-startKeepAlive();
+// startKeepAlive(); Moved to inside ClientReady
 
 const {
     Client,
@@ -71,6 +71,7 @@ for (const file of eventFiles) {
 }
 
 client.once(Events.ClientReady, (c) => {
+    startKeepAlive();
     postActivity(client);
 });
 
