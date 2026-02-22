@@ -28,7 +28,10 @@ module.exports = {
                 quote = `${quoteObj.text}\n-# jump to [original message](${quoteObj.link}) | replied to:\n-# > ${quoteObj.reply}`;
             }
 
-            await interaction.editReply(quote);
+            await interaction.editReply({
+                content: quote,
+                allowedMentions: { parse: [] }
+            });
         } catch (error) {
             console.error(error);
             await interaction.editReply(
