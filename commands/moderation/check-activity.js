@@ -22,6 +22,11 @@ module.exports = {
                 .setName("public")
                 .setDescription("Send as a public message? (Default: False)")
         )
+        .addUserOption((option) =>
+            option
+                .setName("staff")
+                .setDescription("Specific staff member to check activity for")
+        )
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
@@ -35,12 +40,14 @@ module.exports = {
         }
 
         const days = interaction.options.getInteger("days") || 14;
+        const staffUser = interaction.options.getUser("staff");
 
         try {
             const { messageContent, attachment, error } = await generateStaffReport(
                 interaction.client,
                 interaction.guild.id,
-                days
+                days,
+                staffUser
             );
 
             if (error) {

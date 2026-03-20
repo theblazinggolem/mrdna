@@ -37,8 +37,12 @@ module.exports = {
                 const change = entry.changes.find(
                     (c) => c.key === "communication_disabled_until"
                 );
-                if (change && change.new) {
-                    actionType = "manual_timeout";
+                if (change) {
+                    if (change.new) {
+                        actionType = "manual_timeout";
+                    } else if (change.old) {
+                        actionType = "manual_untimeout";
+                    }
                 }
                 break;
             case AuditLogEvent.MessageDelete:

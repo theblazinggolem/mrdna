@@ -23,15 +23,22 @@ function getDaysAgo(dateInfo) {
     return `${diffDays} days ago`;
 }
 
-module.exports = async function generateStaffReport(client, guildId, lookbackDays = 14) {
+module.exports = async function generateStaffReport(client, guildId, lookbackDays = 14, specificUser = null) {
     const guild = client.guilds.cache.get(guildId);
     if (!guild) return { error: "Guild not found" };
 
     await guild.members.fetch();
     // Filter for CURRENT staff only
-    const staffMembers = guild.members.cache.filter((member) =>
+    let staffMembers = guild.members.cache.filter((member) =>
         MOD_ROLES.some((roleId) => member.roles.cache.has(roleId)) && !member.user.bot
     );
+
+    if (specificUser) {
+        staffMembers = staffMembers.filter((member) => member.id === specificUser.id);
+        if (staffMembers.size === 0) {
+            return { error: `User ${specificUser.tag || specificUser.username} is not a current staff member.` };
+        }
+    }
 
     if (staffMembers.size === 0) return { error: "No staff members found." };
 
@@ -89,15 +96,16 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
             last_action: getDaysAgo(lastActionDate),
             last_message: getDaysAgo(lastMsgDate),
             action_counts: isActive ? {
-                warns: 0, timeouts: 0, kicks: 0, bans: 0, purges: 0, other: 0
+                warns: 0, timeouts: 0, untimeouts: 0, kicks: 0, bans: 0, purges: 0, other: 0
             } : null
         };
 
         if (isActive) {
             recentLogs.forEach(log => {
                 const type = log.action_type.toLowerCase();
-                if (type.includes("warn")) stats.action_counts.warns++;
+                if (type.includes("untimeout")) stats.action_counts.untimeouts++;
                 else if (type.includes("timeout")) stats.action_counts.timeouts++;
+                else if (type.includes("warn")) stats.action_counts.warns++;
                 else if (type.includes("kick")) stats.action_counts.kicks++;
                 else if (type.includes("ban")) stats.action_counts.bans++;
                 else if (type.includes("purge") || type.includes("delete")) stats.action_counts.purges++;
@@ -117,10 +125,36 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
     const attachment = new AttachmentBuilder(buffer, { name: "staff_report.json" });
 
     let messageContent = `📊 **Staff Activity Report** (Last ${lookbackDays} Days)\n\n`;
-    messageContent += `**Active Staff (${activeMentions.length}):**\n`;
-    messageContent += activeMentions.length ? activeMentions.join(", ") : "None";
-    messageContent += `\n\n**Inactive Staff (${inactiveMentions.length}):**\n`;
-    messageContent += inactiveMentions.length ? inactiveMentions.join(", ") : "None";
+
+    if (specificUser && staffMembers.size === 1) {
+        const member = staffMembers.first();
+        const username = member.user.username;
+        const stats = reportData.active[username] || reportData.inactive[username];
+
+        messageContent += `**User:** ${member.toString()}\n`;
+        messageContent += `**Status:** ${reportData.active[username] ? "Active 🟢" : "Inactive 🔴"}\n`;
+        messageContent += `**Last Action:** ${stats.last_action}\n`;
+        messageContent += `**Last Message:** ${stats.last_message}\n`;
+
+        if (stats.action_counts) {
+            const counts = stats.action_counts;
+            const timeoutStr = counts.untimeouts > 0 ? `${counts.timeouts} (-${counts.untimeouts})` : `${counts.timeouts}`;
+            messageContent += `\n**Actions:**\n`;
+            messageContent += `\`\`\`yaml\n`;
+            messageContent += `Warns:    ${counts.warns}\n`;
+            messageContent += `Timeouts: ${timeoutStr}\n`;
+            messageContent += `Kicks:    ${counts.kicks}\n`;
+            messageContent += `Bans:     ${counts.bans}\n`;
+            messageContent += `Purges:   ${counts.purges}\n`;
+            messageContent += `Other:    ${counts.other}\n`;
+            messageContent += `\`\`\`\n`;
+        }
+    } else {
+        messageContent += `**Active Staff (${activeMentions.length}):**\n`;
+        messageContent += activeMentions.length ? activeMentions.join(", ") : "None";
+        messageContent += `\n\n**Inactive Staff (${inactiveMentions.length}):**\n`;
+        messageContent += inactiveMentions.length ? inactiveMentions.join(", ") : "None";
+    }
 
     return { messageContent, attachment, jsonOutput };
 };

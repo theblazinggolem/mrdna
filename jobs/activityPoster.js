@@ -2,7 +2,7 @@ const cron = require("node-cron");
 const generateStaffReport = require("../utils/generateStaffReport");
 
 const GUILD_ID = "841699180271239218";
-const REPORT_CHANNEL_ID = "1461971930880938129";
+const REPORT_CHANNEL_ID = "1350108952041492561";
 const LOOKBACK_DAYS = 15;
 
 module.exports = (client) => {
