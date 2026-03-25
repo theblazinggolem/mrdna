@@ -4,7 +4,7 @@ const db = require("../db");
 const TARGET_ROLES = ["857990235194261514", "913864890916147270"];
 
 // The specific text commands to track
-const MOD_PREFIXES = ["!warn", "!kick", "!ban", "!timeout", "!lock", "!unlock", "!purge"];
+const MOD_PREFIXES = ["!warn", "!kick", "!ban", "!timeout", "!mute", "!unmute", "!untimeout", "!removetimeout", "!lock", "!unlock", "!purge"];
 
 // Cache to prevent DB spam: userId -> "YYYY-MM-DD"
 const lastActivityCache = new Map();

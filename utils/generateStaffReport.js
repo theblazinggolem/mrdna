@@ -103,8 +103,8 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
         if (isActive) {
             recentLogs.forEach(log => {
                 const type = log.action_type.toLowerCase();
-                if (type.includes("untimeout")) stats.action_counts.untimeouts++;
-                else if (type.includes("timeout")) stats.action_counts.timeouts++;
+                if (type.includes("untimeout") || type.includes("unmute") || type.includes("removetimeout")) stats.action_counts.untimeouts++;
+                else if (type.includes("timeout") || type.includes("mute")) stats.action_counts.timeouts++;
                 else if (type.includes("warn")) stats.action_counts.warns++;
                 else if (type.includes("kick")) stats.action_counts.kicks++;
                 else if (type.includes("ban")) stats.action_counts.bans++;
@@ -124,17 +124,18 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
     const buffer = Buffer.from(jsonOutput, "utf-8");
     const attachment = new AttachmentBuilder(buffer, { name: "staff_report.json" });
 
-    let messageContent = `📊 **Staff Activity Report** (Last ${lookbackDays} Days)\n\n`;
+    const insightsEmoji = "<:insights:1459169355219603607>";
+
+    let messageContent = "";
 
     if (specificUser && staffMembers.size === 1) {
         const member = staffMembers.first();
         const username = member.user.username;
         const stats = reportData.active[username] || reportData.inactive[username];
 
-        messageContent += `**User:** ${member.toString()}\n`;
-        messageContent += `**Status:** ${reportData.active[username] ? "Active 🟢" : "Inactive 🔴"}\n`;
-        messageContent += `**Last Action:** ${stats.last_action}\n`;
-        messageContent += `**Last Message:** ${stats.last_message}\n`;
+        messageContent += `${insightsEmoji} **Moderator Activity Report** (${lookbackDays} days)\n`;
+        messageContent += `**User:** ${username} (${member.id}) ${reportData.active[username] ? "🟢" : "🔴"}\n`;
+        messageContent += `**Last Action:** ${stats.last_action} | **Last Message:** ${stats.last_message}\n`;
 
         if (stats.action_counts) {
             const counts = stats.action_counts;
@@ -150,6 +151,7 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
             messageContent += `\`\`\`\n`;
         }
     } else {
+        messageContent += `${insightsEmoji} **Staff Activity Report** (Last ${lookbackDays} Days)\n\n`;
         messageContent += `**Active Staff (${activeMentions.length}):**\n`;
         messageContent += activeMentions.length ? activeMentions.join(", ") : "None";
         messageContent += `\n\n**Inactive Staff (${inactiveMentions.length}):**\n`;

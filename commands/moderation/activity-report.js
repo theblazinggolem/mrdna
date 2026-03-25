@@ -1,0 +1,93 @@
+const {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    MessageFlags,
+} = require("discord.js");
+const generateStaffReport = require("../../utils/generateStaffReport");
+
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("activity-report")
+        .setDescription("Generate a Staff Activity Report.")
+        .setDMPermission(false)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+        .addUserOption((option) =>
+            option
+                .setName("staff")
+                .setDescription("Specific staff member to check activity for (Admin only)")
+        )
+        .addBooleanOption((option) =>
+            option
+                .setName("all")
+                .setDescription("Generate a global report for all staff members (Admin only)")
+        )
+        .addBooleanOption((option) =>
+            option
+                .setName("public")
+                .setDescription("Send as a public message? (Default: False)")
+        )
+        .addIntegerOption((option) =>
+            option
+                .setName("days")
+                .setDescription("Days to look back (default: 14)")
+                .setMinValue(1)
+        ),
+
+    async execute(interaction) {
+        const isPublic = interaction.options.getBoolean("public") || false;
+
+        // Use flags if not public, otherwise default reply
+        if (isPublic) {
+            await interaction.deferReply();
+        } else {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        }
+
+        try {
+            const days = interaction.options.getInteger("days") || 14;
+            const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+            const staffMention = interaction.options.getUser("staff");
+            const isAll = interaction.options.getBoolean("all") || false;
+
+            if (!isAdmin && (staffMention || isAll)) {
+                return interaction.editReply("❌ You only have permission to generate your own activity report.");
+            }
+
+            let targetUser;
+            if (isAll) {
+                targetUser = null; // Global report
+            } else if (staffMention) {
+                targetUser = staffMention; // Specific staff report
+            } else {
+                targetUser = interaction.user; // Implicit self report
+            }
+
+            const { messageContent, attachment, error } = await generateStaffReport(
+                interaction.client,
+                interaction.guild.id,
+                days,
+                targetUser
+            );
+
+            if (error) {
+                return interaction.editReply(`❌ ${error}`);
+            }
+
+            const payload = { content: messageContent };
+            if (!targetUser && attachment) {
+                payload.files = [attachment];
+            }
+
+            await interaction.editReply(payload);
+
+        } catch (err) {
+            console.error(err);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: "❌ An error occurred while generating the report.", ephemeral: true });
+            } else {
+                await interaction.editReply("❌ An error occurred while generating the report.");
+            }
+        }
+    },
+};
+
