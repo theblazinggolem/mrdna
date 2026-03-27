@@ -11,16 +11,6 @@ module.exports = {
         .setDescription("Generate a Staff Activity Report.")
         .setDMPermission(false)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
-        .addUserOption((option) =>
-            option
-                .setName("staff")
-                .setDescription("Specific staff member to check activity for (Admin only)")
-        )
-        .addBooleanOption((option) =>
-            option
-                .setName("all")
-                .setDescription("Generate a global report for all staff members (Admin only)")
-        )
         .addBooleanOption((option) =>
             option
                 .setName("public")
@@ -31,6 +21,16 @@ module.exports = {
                 .setName("days")
                 .setDescription("Days to look back (default: 14)")
                 .setMinValue(1)
+        )
+        .addUserOption((option) =>
+            option
+                .setName("staff")
+                .setDescription("Specific staff member to check activity for (Admin only)")
+        )
+        .addBooleanOption((option) =>
+            option
+                .setName("all")
+                .setDescription("Generate a global report for all staff members (Admin only)")
         ),
 
     async execute(interaction) {
@@ -49,17 +49,14 @@ module.exports = {
             const staffMention = interaction.options.getUser("staff");
             const isAll = interaction.options.getBoolean("all") || false;
 
-            if (!isAdmin && (staffMention || isAll)) {
-                return interaction.editReply("❌ You only have permission to generate your own activity report.");
-            }
+            let targetUser = interaction.user; // Default to self report
 
-            let targetUser;
-            if (isAll) {
-                targetUser = null; // Global report
-            } else if (staffMention) {
-                targetUser = staffMention; // Specific staff report
-            } else {
-                targetUser = interaction.user; // Implicit self report
+            if (isAdmin) {
+                if (isAll) {
+                    targetUser = null; // Global report
+                } else if (staffMention) {
+                    targetUser = staffMention; // Specific staff report
+                }
             }
 
             const { messageContent, attachment, error } = await generateStaffReport(
@@ -83,7 +80,7 @@ module.exports = {
         } catch (err) {
             console.error(err);
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: "❌ An error occurred while generating the report.", ephemeral: true });
+                await interaction.reply({ content: "❌ An error occurred while generating the report.", flags: MessageFlags.Ephemeral });
             } else {
                 await interaction.editReply("❌ An error occurred while generating the report.");
             }

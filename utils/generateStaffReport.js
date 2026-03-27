@@ -27,7 +27,7 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
     const guild = client.guilds.cache.get(guildId);
     if (!guild) return { error: "Guild not found" };
 
-    await guild.members.fetch();
+    await guild.members.fetch().catch(console.error);
     // Filter for CURRENT staff only
     let staffMembers = guild.members.cache.filter((member) =>
         MOD_ROLES.some((roleId) => member.roles.cache.has(roleId)) && !member.user.bot
