@@ -6,11 +6,16 @@ const TARGET_CATEGORIES = ['1373184128203227136', '1260957720731979857', '842746
 const ALERT_CHANNEL_ID = '864756038707314698';
 
 const USER_IDS_TO_DEMOTE = [
-    "411737269406400512", "411737269406400512", "1333750043093631109", "990166191584718948"
+    "1333750043093631109"
 ];
 
 const ROLE_IDS_TO_REMOVE = [
     "867964544717295646", "842763148985368617", "857990235194261514", ""
+];
+
+// 🚨 USERS WHO ARE ALLOWED TO RUN THE COMMAND 🚨
+const ALLOWED_LOCKDOWN_USERS = [
+    "1421251752732135518", "1211084462662877257", "1411284738383282202", "930045738245820426"
 ];
 
 const LOCKDOWN_FILE = path.join(__dirname, '../../data/lockdown.json');
@@ -19,7 +24,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('lockdown')
         .setDescription('Locks down the server.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+        // .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addBooleanOption(option =>
             option.setName('lock')
                 .setDescription('True to lock down the server, False to unlock. Defaults to True.')
@@ -27,6 +32,12 @@ module.exports = {
         ),
 
     async execute(interaction) {
+        const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+
+        if (!isAdmin && !ALLOWED_LOCKDOWN_USERS.includes(interaction.user.id)) {
+            return interaction.reply({ content: 'You do not have permission to use the lockdown command.', flags: MessageFlags.Ephemeral });
+        }
+
         const lockOption = interaction.options.getBoolean('lock') ?? true;
 
         // Ensure data directory exists
