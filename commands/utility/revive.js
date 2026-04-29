@@ -1,35 +1,10 @@
 const { SlashCommandBuilder, MessageFlags } = require("discord.js");
 
-const channelCooldowns = new Map();
-
-const BOOSTER_ROLE_ID = "855954434935619584";
 const REVIVE_ROLE_ID = "858331630997340170";
 const LOG_CHANNEL_ID = "1350108952041492561";
-const GLOBAL_COOLDOWN_MS = 3 * 60 * 60 * 1000;
-const BOOSTER_COOLDOWN_MS = 90 * 60 * 1000;
+const GLOBAL_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 
-const BLACKLIST_ROLE_IDS = [
-    "1463068799166189672"
-];
-
-// Test Server Config
-// const BOOSTER_ROLE_ID = "1194147739517329478";
-// const REVIVE_ROLE_ID = "932906148326154280";
-// const LOG_CHANNEL_ID = "850979723882266635";
-// const GLOBAL_COOLDOWN_MS = 3 * 60 * 1000;
-// const BOOSTER_COOLDOWN_MS = 60 * 1000;
-//
-
-const forbiddenPatterns = [
-    "porn",
-    "fuck",
-    "bitch",
-    "hitler",
-    /\b[gG](?:[oO0]{2,})[nN]\w*\b/,
-    /\bn[i1]g{2,}(?:a|er)?s?\b/i,
-    /f[a@]g{1,2}[o0]ts?/,
-    /r[e3]t[a@]rd/,
-];
+const channelCooldowns = new Map();
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -45,101 +20,33 @@ module.exports = {
 
     async execute(interaction) {
         try {
-            const { guild, channel, member, user } = interaction;
+            const { guild, channel, user } = interaction;
             const topic = interaction.options.getString("topic");
-
-            // 0. Blacklist Check
-            if (member.roles.cache.some((role) => BLACKLIST_ROLE_IDS.includes(role.id))) {
-                return interaction.reply({
-                    content: "You are blacklisted from using this command.",
-                    flags: MessageFlags.Ephemeral,
-                });
-            }
 
             const pingPatterns = [/@everyone/, /@here/, /<@&?\d+>/];
             if (pingPatterns.some((p) => p.test(topic))) {
                 return interaction.reply({
-                    content:
-                        "Please send the command again without any mentions.",
+                    content: "Please send the command again without any mentions.",
                     flags: MessageFlags.Ephemeral,
                 });
             }
 
-            for (const pattern of forbiddenPatterns) {
-                const regex =
-                    pattern instanceof RegExp
-                        ? pattern
-                        : new RegExp(`\\b${pattern}\\b`, "i");
-                if (regex.test(topic)) {
-                    const logChannel = guild.channels.cache.get(LOG_CHANNEL_ID);
-                    if (logChannel) {
-                        const logMsg = `**Revive Blocked**\n**User:** <@${user.id
-                            }> (${user.id
-                            })\n**Channel:** ${channel.toString()}\n**Content:** \`${topic}\``;
-                        await logChannel.send({ content: logMsg });
-                    }
-
-                    return interaction.reply({
-                        content:
-                            "Your topic contains a forbidden word or pattern.",
-                        flags: MessageFlags.Ephemeral,
-                    });
-                }
-            }
-
             const now = Date.now();
-            let cooldownData = channelCooldowns.get(channel.id) || {
-                globalUnlock: 0,
-                boosterUnlock: 0,
-            };
-
-            const isBooster = member.roles.cache.has(BOOSTER_ROLE_ID);
-            const isGlobalCooldownActive = now < cooldownData.globalUnlock;
-
-            if (isGlobalCooldownActive) {
-                if (isBooster) {
-                    if (now < cooldownData.boosterUnlock) {
-                        const timeLeft = Math.floor(
-                            cooldownData.boosterUnlock / 1000
-                        );
-                        return interaction.reply({
-                            content: `Command bypass on cooldown. Next revive <t:${timeLeft}:R>`,
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    }
-                    cooldownData.boosterUnlock = now + BOOSTER_COOLDOWN_MS;
-                } else {
-                    const globalTime = Math.floor(
-                        cooldownData.globalUnlock / 1000
-                    );
-                    const boosterTime = Math.floor(
-                        cooldownData.boosterUnlock / 1000
-                    );
-
-                    const boosterStatus =
-                        now < cooldownData.boosterUnlock
-                            ? `<t:${boosterTime}:R>`
-                            : "**Available Now**";
-
-                    return interaction.reply({
-                        content: `Command is on cooldown. Next revive <t:${globalTime}:R>\n-# Boosters get lesser cooldown, next revive ${boosterStatus}`,
-                        flags: MessageFlags.Ephemeral,
-                    });
-                }
-            } else {
-                cooldownData.globalUnlock = now + GLOBAL_COOLDOWN_MS;
-                cooldownData.boosterUnlock = now + BOOSTER_COOLDOWN_MS;
+            const unlockTime = channelCooldowns.get(channel.id) || 0;
+            if (now < unlockTime) {
+                const timeLeft = Math.floor(unlockTime / 1000);
+                return interaction.reply({
+                    content: `Command is on cooldown. Next revive <t:${timeLeft}:R>`,
+                    flags: MessageFlags.Ephemeral,
+                });
             }
-
-            channelCooldowns.set(channel.id, cooldownData);
+            channelCooldowns.set(channel.id, now + GLOBAL_COOLDOWN_MS);
 
             const linkRegex = /https?:\/\/\S+/;
             if (linkRegex.test(topic)) {
                 const logChannel = guild.channels.cache.get(LOG_CHANNEL_ID);
                 if (logChannel) {
-                    const logMsg = `**Chat Revive Link Detected**\n**User:** <@${user.id
-                        }> (${user.id
-                        })\n**Channel:** ${channel.toString()}\n**Content:** ${topic}`;
+                    const logMsg = `**Chat Revive Link Detected**\n**User:** <@${user.id}> (${user.id})\n**Channel:** ${channel.toString()}\n**Content:** ${topic}`;
                     await logChannel.send({ content: logMsg });
                 }
             }

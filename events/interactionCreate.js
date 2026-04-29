@@ -256,6 +256,28 @@ module.exports = {
                     });
                     return;
                 }
+
+                // --- D. Stream Role Toggle ---
+                if (customId === "toggle_stream_role") {
+                    const roleId = "1498877432780820610";
+                    const member = interaction.member;
+                    const hasRole = member.roles.cache.has(roleId);
+
+                    if (hasRole) {
+                        await member.roles.remove(roleId);
+                        await interaction.reply({
+                            content: `**Removed**: <@&${roleId}>\n-# You will not get pinged for streams`,
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    } else {
+                        await member.roles.add(roleId);
+                        await interaction.reply({
+                            content: `**Added**: <@&${roleId}>\n-# You will get pinged for streams`,
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    }
+                    return;
+                }
             }
 
             // 4. SELECT MENUS
