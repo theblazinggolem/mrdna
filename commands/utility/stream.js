@@ -32,7 +32,8 @@ module.exports = {
             const { guild, channel, member, user } = interaction;
             const contents = interaction.options.getString("content");
             const voiceChannelId = member.voice.channelId;
-            const targetChannelId = interaction.options.getString("channel") || voiceChannelId || "843831162732544030";
+            const targetChannelId = interaction.options.getString("channel") || voiceChannelId;
+            const channelSuffix = targetChannelId ? ` in <#${targetChannelId}>` : "";
 
             // 1. Mentions Check
             const pingPatterns = [/@everyone/, /@here/, /<@&?\d+>/];
@@ -79,7 +80,7 @@ module.exports = {
 
             // 5. Send Stream Ping
             await interaction.reply({
-                content: `<@&${STREAM_ROLE_ID}>, <@${user.id}> is streaming **${contents}** in <#${targetChannelId}>`,
+                content: `<@&${STREAM_ROLE_ID}>, <@${user.id}> is streaming **${contents}**${channelSuffix}`,
                 components: [row],
                 allowedMentions: { roles: [STREAM_ROLE_ID], users: [user.id] },
             });
