@@ -44,33 +44,11 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
 
     const staffIds = staffMembers.map(m => m.id);
 
-    // 1. Mod Logs
-    const recentLogsRes = await db.query(
-        `SELECT * FROM mod_logs
-         WHERE mod_id = ANY($1::text[])
-         AND executed_at >= NOW() - INTERVAL '${lookbackDays} days'`,
+    // 1. User Activity (Last Message)
+    const activityRes = await db.query(
+        `SELECT user_id, last_seen FROM user_activity WHERE user_id = ANY($1::text[])`,
         [staffIds]
     );
-
-    // 2. Last Action (All time)
-    const lastActionRes = await db.query(
-        `SELECT mod_id, MAX(executed_at) as last_seen
-         FROM mod_logs
-         WHERE mod_id = ANY($1::text[])
-         GROUP BY mod_id`,
-        [staffIds]
-    );
-
-    // 3. User Activity (Last Message)
-    let lastMessageRes = { rows: [] };
-    try {
-        lastMessageRes = await db.query(
-            `SELECT user_id, last_seen FROM user_activity WHERE user_id = ANY($1::text[])`,
-            [staffIds]
-        );
-    } catch (e) {
-        console.error("User activity table might be missing or error querying:", e.message);
-    }
 
     const reportData = { active: {}, inactive: {} };
     const activeMentions = [];
@@ -80,37 +58,26 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
         const userId = member.id;
         const username = member.user.username;
 
-        // Data gathering
-        const lastActionRecord = lastActionRes.rows.find(r => r.mod_id === userId);
-        const lastMsgRecord = lastMessageRes.rows.find(r => r.user_id === userId);
-
-        const lastActionDate = lastActionRecord ? lastActionRecord.last_seen : null;
-        const lastMsgDate = lastMsgRecord ? lastMsgRecord.last_seen : null;
-
-        const recentLogs = recentLogsRes.rows.filter(r => r.mod_id === userId);
-
-        const isActive = recentLogs.length > 0;
+        const activityRecord = activityRes.rows.find(r => r.user_id === userId);
+        const lastSeenDate = activityRecord ? activityRecord.last_seen : null;
+        
+        const daysAgo = getDaysAgo(lastSeenDate);
+        
+        // Check if active (seen within lookbackDays)
+        let isActive = false;
+        if (lastSeenDate) {
+            const now = new Date();
+            const diffTime = Math.abs(now - new Date(lastSeenDate));
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            isActive = diffDays < lookbackDays;
+        }
 
         const stats = {
             id: userId,
-            last_action: getDaysAgo(lastActionDate),
-            last_message: getDaysAgo(lastMsgDate),
-            action_counts: isActive ? {
-                warns: 0, timeouts: 0, untimeouts: 0, kicks: 0, bans: 0, purges: 0, other: 0
-            } : null
+            last_seen: daysAgo,
         };
 
         if (isActive) {
-            recentLogs.forEach(log => {
-                const type = log.action_type.toLowerCase();
-                if (type.includes("untimeout") || type.includes("unmute") || type.includes("removetimeout")) stats.action_counts.untimeouts++;
-                else if (type.includes("timeout") || type.includes("mute")) stats.action_counts.timeouts++;
-                else if (type.includes("warn")) stats.action_counts.warns++;
-                else if (type.includes("kick")) stats.action_counts.kicks++;
-                else if (type.includes("ban")) stats.action_counts.bans++;
-                else if (type.includes("purge") || type.includes("delete")) stats.action_counts.purges++;
-                else stats.action_counts.other++;
-            });
             reportData.active[username] = stats;
             activeMentions.push(member.toString());
         } else {
@@ -133,23 +100,9 @@ module.exports = async function generateStaffReport(client, guildId, lookbackDay
         const username = member.user.username;
         const stats = reportData.active[username] || reportData.inactive[username];
 
-        messageContent += `${insightsEmoji} **Moderator Activity Report** (${lookbackDays} days)\n`;
+        messageContent += `${insightsEmoji} **Staff Activity Report** (${lookbackDays} days)\n`;
         messageContent += `**User:** ${username} (${member.id}) ${reportData.active[username] ? "🟢" : "🔴"}\n`;
-        messageContent += `**Last Action:** ${stats.last_action} | **Last Message:** ${stats.last_message}\n`;
-
-        if (stats.action_counts) {
-            const counts = stats.action_counts;
-            const timeoutStr = counts.untimeouts > 0 ? `${counts.timeouts} (-${counts.untimeouts})` : `${counts.timeouts}`;
-            messageContent += `\n**Actions:**\n`;
-            messageContent += `\`\`\`yaml\n`;
-            messageContent += `Warns:    ${counts.warns}\n`;
-            messageContent += `Timeouts: ${timeoutStr}\n`;
-            messageContent += `Kicks:    ${counts.kicks}\n`;
-            messageContent += `Bans:     ${counts.bans}\n`;
-            messageContent += `Purges:   ${counts.purges}\n`;
-            messageContent += `Other:    ${counts.other}\n`;
-            messageContent += `\`\`\`\n`;
-        }
+        messageContent += `**Last Seen:** ${stats.last_seen}\n`;
     } else {
         messageContent += `${insightsEmoji} **Staff Activity Report** (Last ${lookbackDays} Days)\n\n`;
         messageContent += `**Active Staff (${activeMentions.length}):**\n`;
