@@ -66,6 +66,12 @@ module.exports = {
                         .setDescription("A server emoji to use as your role icon.")
                         .setRequired(false)
                 )
+                .addBooleanOption((option) =>
+                    option
+                        .setName("remove_icon")
+                        .setDescription("Set to true to remove your role icon/emoji.")
+                        .setRequired(false)
+                )
                 .addStringOption((option) =>
                     option
                         .setName("secondary_color")
@@ -152,7 +158,7 @@ async function handleCreate(
             const emojiId = customEmojiMatch[1];
             const emoji = interaction.guild.emojis.cache.get(emojiId);
             if (emoji) {
-                roleIconUrl = emoji.url;
+                roleIconUrl = emoji.imageURL();
             } else {
                 return interaction.followUp({
                     content: "Could not find that custom emoji in this server.",
@@ -230,6 +236,7 @@ async function handleEdit(interaction, member, existingUserRole) {
     const secondaryColorRequest =
         interaction.options.getString("secondary_color");
     const emojiString = interaction.options.getString("emoji");
+    const removeIcon = interaction.options.getBoolean("remove_icon");
 
     if (rawPrimaryColor && validPrimaryColor === false) {
         return interaction.followUp({
@@ -248,7 +255,7 @@ async function handleEdit(interaction, member, existingUserRole) {
             const emojiId = customEmojiMatch[1];
             const emoji = interaction.guild.emojis.cache.get(emojiId);
             if (emoji) {
-                roleIconUrl = emoji.url;
+                roleIconUrl = emoji.imageURL();
             } else {
                 return interaction.followUp({
                     content: "Could not find that custom emoji in this server.",
@@ -260,7 +267,7 @@ async function handleEdit(interaction, member, existingUserRole) {
         }
     }
 
-    if (!roleName && !rawPrimaryColor && !secondaryColorRequest && !emojiString) {
+    if (!roleName && !rawPrimaryColor && !secondaryColorRequest && !emojiString && !removeIcon) {
         return interaction.followUp({
             content:
                 "You must provide a new name, a new color, a new emoji, or a special request to edit your role.",
@@ -276,7 +283,16 @@ async function handleEdit(interaction, member, existingUserRole) {
 
     let replyMsg = `Your custom role <@&${updatedRole.id}> has been successfully updated!`;
 
-    if (roleIconUrl) {
+    if (removeIcon) {
+        try {
+            await updatedRole.setIcon(null);
+            await updatedRole.setUnicodeEmoji(null);
+            replyMsg += "\n\n**Role Icon:** Icon removed.";
+        } catch (error) {
+            console.error("Failed to remove role icon:", error);
+            replyMsg += "\n\n**Warning:** Failed to remove role icon.";
+        }
+    } else if (roleIconUrl) {
         try {
             await updatedRole.setIcon(roleIconUrl);
             replyMsg += "\n\n**Role Icon:** Icon updated to the selected custom emoji.";
