@@ -12,48 +12,19 @@ const ASSIGNABLE_ROLES = [
     { name: "Content Creator", id: "844531446269214740" },
 ];
 
-const REVOKE_CONFIGS = {
-    custom: {
-        minRoleId: "1424016949288898731",
-        maxRoleId: "1424000379712045237",
-        requiredRoleIds: ["855954434935619584"], // Booster role
-        title: "Custom Roles (Booster Perk)",
-        unauthorizedReason: "User is not a server booster.",
-    },
-    lvl25: {
-        minRoleId: "1375397609908469800",
-        maxRoleId: "1375397935050919997",
-        requiredRoleIds: [
-            "843856166994968597", // lvl 25 role
-            "843856481288060978", // lvl 50 role
-            "843856587469750333", // lvl 75 role
-            "843856716382208020", // lvl 100 role
-            "843856730232324148", // lvl 200 role
-            "842053547301273642", // vip pass role
-            "855954434935619584", // booster role
-            "857990235194261514", // staff
-            "913864890916147270", // admins
-        ],
-        title: "Lvl 25+ Gradient Roles",
-        unauthorizedReason: "User does not meet Lvl 25+ requirements.",
-    },
-    lvl50: {
-        minRoleId: "1375397935050919997",
-        maxRoleId: "1424016949288898731",
-        requiredRoleIds: [
-            "843856481288060978", // lvl 50 role
-            "843856587469750333", // lvl 75 role
-            "843856716382208020", // lvl 100 role
-            "843856730232324148", // lvl 200 role
-            "842053547301273642", // vip pass role
-            "855954434935619584", // booster role
-            "857990235194261514", // staff
-            "913864890916147270", // admins
-        ],
-        title: "Lvl 50+ Gradient Roles",
-        unauthorizedReason: "User does not meet Lvl 50+ requirements.",
-    },
-};
+const ROLE_CATEGORIES = require("../../data/role-categories.js");
+
+// Generate REVOKE_CONFIGS from ROLE_CATEGORIES
+const REVOKE_CONFIGS = {};
+ROLE_CATEGORIES.forEach(cat => {
+    REVOKE_CONFIGS[cat.id] = {
+        minRoleId: cat.minId,
+        maxRoleId: cat.maxId,
+        requiredRoleIds: cat.requiredRoles,
+        title: cat.label,
+        unauthorizedReason: "Revoked unauthorized gradient role"
+    };
+});
 
 async function sendLogMessage(interaction, action, roleName, targetUser) {
     try {
@@ -67,9 +38,8 @@ async function sendLogMessage(interaction, action, roleName, targetUser) {
 
         // Format: "staff username assigned/removed roleName to/from @user"
         const preposition = action === "assigned" ? "to" : "from";
-        const logContent = `**${
-            interaction.user.username
-        }** ${action} **${roleName}** ${preposition} ${targetUser.toString()}`;
+        const logContent = `**${interaction.user.username
+            }** ${action} **${roleName}** ${preposition} ${targetUser.toString()}`;
 
         await logChannel.send(logContent);
     } catch (error) {
@@ -403,9 +373,10 @@ module.exports = {
                         .setDescription("The category of roles to check")
                         .setRequired(true)
                         .addChoices(
-                            { name: "Custom Roles (Booster)", value: "custom" },
-                            { name: "Lvl 25+ Gradient", value: "lvl25" },
-                            { name: "Lvl 50+ Gradient", value: "lvl50" }
+                            ...ROLE_CATEGORIES.map(cat => ({
+                                name: cat.label,
+                                value: cat.id
+                            }))
                         )
                 )
                 .addStringOption((option) =>

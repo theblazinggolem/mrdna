@@ -7,57 +7,7 @@ const {
     MessageFlags,
 } = require("discord.js");
 
-const ROLE_CATEGORIES = [
-    {
-        id: "lvl_25",
-        label: "Level 25+ Gradients",
-        minId: "1375397609908469800",
-        maxId: "1375397935050919997",
-        requiredRoles: [
-            "843856166994968597",
-            "843856481288060978",
-            "843856587469750333",
-            "843856716382208020",
-            "843856730232324148",
-            "842053547301273642",
-            "855954434935619584",
-            "857990235194261514",
-            "913864890916147270",
-        ],
-    },
-    {
-        id: "lvl_50",
-        label: "Level 50+ Gradients",
-        minId: "1375397935050919997",
-        maxId: "1424016868091363444",
-        requiredRoles: [
-            "843856481288060978",
-            "843856587469750333",
-            "843856716382208020",
-            "843856730232324148",
-            "842053547301273642",
-            "855954434935619584",
-            "857990235194261514",
-            "913864890916147270",
-        ],
-    },
-    {
-        id: "char_roles",
-        label: "Character Roles",
-        minId: "1424016868091363444",
-        maxId: "1424016949288898731",
-        requiredRoles: [
-            "843856481288060978",
-            "843856587469750333",
-            "843856716382208020",
-            "843856730232324148",
-            "842053547301273642",
-            "855954434935619584",
-            "857990235194261514",
-            "913864890916147270",
-        ],
-    },
-];
+const ROLE_CATEGORIES = require("../../data/role-categories.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -94,10 +44,19 @@ module.exports = {
                     );
 
                     const menuOptions = sortedRoles
-                        .map((r) => ({
-                            label: r.name,
-                            value: r.id,
-                        }))
+                        .map((r) => {
+                            const option = {
+                                label: r.name,
+                                value: r.id,
+                            };
+                            // Check shared file for emoji mapping
+                            if (cat.emojis && cat.emojis[r.id]) {
+                                option.emoji = cat.emojis[r.id];
+                            } else if (r.unicodeEmoji) {
+                                option.emoji = r.unicodeEmoji;
+                            }
+                            return option;
+                        })
                         .slice(0, 25);
 
                     const menu = new StringSelectMenuBuilder()

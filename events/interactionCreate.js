@@ -12,58 +12,7 @@ const commandData = require("../data/command-data.json");
 const TRANSCRIPT_LOG_CHANNEL_ID = "915884828153511946";
 const STAFF_ROLE_IDS = ["913864890916147270", "857990235194261514"];
 
-// Config for Gradient Roles
-const ROLE_CATEGORIES = [
-    {
-        id: "lvl_25",
-        label: "Level 25+ Gradients",
-        minId: "1375397609908469800",
-        maxId: "1375397935050919997",
-        requiredRoles: [
-            "843856166994968597",
-            "843856481288060978",
-            "843856587469750333",
-            "843856716382208020",
-            "843856730232324148",
-            "842053547301273642",
-            "855954434935619584",
-            "857990235194261514",
-            "913864890916147270",
-        ],
-    },
-    {
-        id: "lvl_50",
-        label: "Level 50+ Gradients",
-        minId: "1375397935050919997",
-        maxId: "1424016868091363444",
-        requiredRoles: [
-            "843856481288060978",
-            "843856587469750333",
-            "843856716382208020",
-            "843856730232324148",
-            "842053547301273642",
-            "855954434935619584",
-            "857990235194261514",
-            "913864890916147270",
-        ],
-    },
-    {
-        id: "char_roles",
-        label: "Character Roles",
-        minId: "1424016868091363444",
-        maxId: "1424016949288898731",
-        requiredRoles: [
-            "843856481288060978",
-            "843856587469750333",
-            "843856716382208020",
-            "843856730232324148",
-            "842053547301273642",
-            "855954434935619584",
-            "857990235194261514",
-            "913864890916147270",
-        ],
-    },
-];
+const ROLE_CATEGORIES = require("../data/role-categories.js");
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -231,7 +180,7 @@ module.exports = {
                     if (rolesToRemove.size > 0) {
                         await interaction.member.roles.remove(rolesToRemove);
                         await interaction.editReply({
-                            content: `Removed ${rolesToRemove.size} cosmetic roles.`,
+                            content: `removed: ${rolesToRemove.map(r => r.toString()).join(', ')}`,
                         });
                     } else {
                         await interaction.editReply({
@@ -342,31 +291,44 @@ async function handleGradientSelection(interaction, customId, selectedValue) {
 
     const selectedRole = interaction.guild.roles.cache.get(selectedValue);
 
-    let allCosmeticRoleIds = [];
+    const targetHasIcon = cat.hasIcon || false;
+    let rolesToRemoveIds = [];
+
     for (const c of ROLE_CATEGORIES) {
-        const min = interaction.guild.roles.cache.get(c.minId);
-        const max = interaction.guild.roles.cache.get(c.maxId);
-        if (min && max) {
-            interaction.guild.roles.cache.forEach((r) => {
-                if (
-                    r.position > Math.min(min.position, max.position) &&
-                    r.position < Math.max(min.position, max.position)
-                ) {
-                    allCosmeticRoleIds.push(r.id);
-                }
-            });
+        const cHasIcon = c.hasIcon || false;
+        if (cHasIcon === targetHasIcon) {
+            const min = interaction.guild.roles.cache.get(c.minId);
+            const max = interaction.guild.roles.cache.get(c.maxId);
+            if (min && max) {
+                interaction.guild.roles.cache.forEach((r) => {
+                    if (
+                        r.position > Math.min(min.position, max.position) &&
+                        r.position < Math.max(min.position, max.position)
+                    ) {
+                        rolesToRemoveIds.push(r.id);
+                    }
+                });
+            }
         }
     }
 
     const currentCosmetics = interaction.member.roles.cache.filter((r) =>
-        allCosmeticRoleIds.includes(r.id)
+        rolesToRemoveIds.includes(r.id)
     );
+    
+    const removedRoles = currentCosmetics.size > 0 ? currentCosmetics.map(r => r.toString()).join(', ') : "";
+
     if (currentCosmetics.size > 0)
         await interaction.member.roles.remove(currentCosmetics);
 
     if (selectedRole) {
         await interaction.member.roles.add(selectedRole);
-        await interaction.editReply(`Equipped **${selectedRole.name}**`);
+        
+        let content = `added: ${selectedRole.toString()}`;
+        if (removedRoles) {
+            content += `\nremoved: ${removedRoles}`;
+        }
+        await interaction.editReply(content);
     }
 }
 
